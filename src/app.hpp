@@ -32,6 +32,9 @@ namespace my_vk_app {
     Window window{config::width, config::height, config::appName};
     vk::raii::Context context;
     vk::raii::Instance instance = nullptr;
+    vk::raii::PhysicalDevice physicalDevice = nullptr;
+    vk::raii::Device logicalDevice = nullptr;
+    vk::raii::Queue graphicsQueue = nullptr;
     DebugMessenger debugMessenger;
   };
 }

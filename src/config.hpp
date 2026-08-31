@@ -18,22 +18,16 @@
     #define ENGINE_LOG_WARNING_ENABLED 1
     #define ENGINE_LOG_ERROR_ENABLED   1
     #define ENGINE_LOG_VULKAN_ENABLED  1
-    #define ENGINE_LOG_RENDER_ENABLED  0  
+    #define ENGINE_LOG_RENDER_ENABLED  0
 #endif
 
 namespace config {
 
-    // =========================================================================
-    // 1. USTAWIENIA OKNA I APLIKACJI
-    // =========================================================================
     inline constexpr uint32_t width  = 1280;
     inline constexpr uint32_t height = 720;
     inline constexpr const char* appName    = "Vulkan Renderer";
     inline constexpr const char* engineName = "Custom Engine";
 
-    // =========================================================================
-    // 2. VULKAN LAYERS & EXTENSIONS
-    // =========================================================================
 #ifdef NDEBUG
     inline constexpr bool enableValidationLayers = false;
 #else
@@ -42,6 +36,10 @@ namespace config {
 
     inline const std::vector<const char*> validationLayers = {
         "VK_LAYER_KHRONOS_validation"
+    };
+
+    inline const std::vector<const char*> requiredDeviceExtension = {
+        vk::KHRSwapchainExtensionName
     };
 
     inline vk::ApplicationInfo getAppInfo() {
