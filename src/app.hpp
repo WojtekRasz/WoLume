@@ -15,6 +15,7 @@
 #include <iostream>
 #include <stdexcept>
 
+#include "swapchain.hpp"
 
 
 namespace wo_lum {
@@ -37,6 +38,7 @@ namespace wo_lum {
     vk::raii::SurfaceKHR surface = nullptr;
     vk::raii::DebugUtilsMessengerEXT debugMessenger = nullptr;
     DeviceContext deviceContext;
+    SwapChainContext swapChainContext;
   };
 }
 

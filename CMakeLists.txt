@@ -25,7 +25,8 @@ add_executable(${PROJECT_NAME} ${SOURCES}
         src/debug_messenger.hpp
         src/device.hpp
         src/device.cpp
-        src/swapchain.hpp)
+        src/swapchain.hpp
+        src/swapchain.cpp)
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
         VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1

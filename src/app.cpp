@@ -17,6 +17,7 @@ namespace wo_lum {
     }
     surface = window.createSurface(instance);
     deviceContext = createDeviceContext(instance, surface);
+    swapChainContext = createSwapChainContext(deviceContext, surface, window);
 
   }
 

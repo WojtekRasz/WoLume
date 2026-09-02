@@ -20,7 +20,7 @@ namespace wo_lum {
     static void pollEvents() ;
 
     static std::vector<const char*> getRequiredExtensions() ;
-    [[nodiscard]] GLFWwindow* getNativeHandle() const { return window; }
+    [[nodiscard]] GLFWwindow* getGlfwWindow() const { return window; }
 
     [[nodiscard]] vk::raii::SurfaceKHR createSurface(const vk::raii::Instance& instance) const;
 
