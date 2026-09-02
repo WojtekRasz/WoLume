@@ -2,23 +2,27 @@
 
 #include "device.hpp"
 
-namespace my_vk_app {
-  void App::initVulkan() {
-    instance = createInstance(context, window.getRequiredExtensions());
-
-    if (config::enableValidationLayers) {
-      debugMessenger = DebugMessenger(instance);
-    }
-
-    physicalDevice = pickPhysicalDevice(instance);
-    QueueFamilyIndices queueFamilyIndices = findQueueFamilies( physicalDevice );
-    logicalDevice = createLogicalDevice(physicalDevice, queueFamilyIndices);
-    graphicsQueue = getQueueHandle( logicalDevice, queueFamilyIndices.graphicsFamily.value(), 0);
+namespace wo_lum {
+  App::App():
+    window{config::width, config::height, "Humble Window"}
+  {
+    initVulkan();
   }
 
-  void App::mainLoop() {
+  void App::initVulkan()
+  {
+    instance = createInstance(context, Window::getRequiredExtensions());
+    if (config::enableValidationLayers) {
+      debugMessenger = createDebugMessenger(instance);
+    }
+    surface = window.createSurface(instance);
+    deviceContext = createDeviceContext(instance, surface);
+
+  }
+
+  void App::mainLoop(){
     while (!window.shouldClose()) {
-      window.pollEvents();
+      Window::pollEvents();
     }
   }
 }

@@ -5,6 +5,7 @@
 #include "window.hpp"
 #include "config.hpp"
 #include "debug_messenger.hpp"
+#include "device.hpp"
 
 #include <vulkan/vulkan_raii.hpp>
 
@@ -16,12 +17,13 @@
 
 
 
-namespace my_vk_app {
+namespace wo_lum {
 
   class App {
   public:
+    App();
+
     void run() {
-      initVulkan();
       mainLoop();
     }
 
@@ -29,13 +31,12 @@ namespace my_vk_app {
     void initVulkan();
     void mainLoop();
 
-    Window window{config::width, config::height, config::appName};
+    Window window;
     vk::raii::Context context;
     vk::raii::Instance instance = nullptr;
-    vk::raii::PhysicalDevice physicalDevice = nullptr;
-    vk::raii::Device logicalDevice = nullptr;
-    vk::raii::Queue graphicsQueue = nullptr;
-    DebugMessenger debugMessenger;
+    vk::raii::SurfaceKHR surface = nullptr;
+    vk::raii::DebugUtilsMessengerEXT debugMessenger = nullptr;
+    DeviceContext deviceContext;
   };
 }
 

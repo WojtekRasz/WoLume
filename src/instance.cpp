@@ -1,7 +1,7 @@
 #include "instance.hpp"
 #include "config.hpp"
 
-namespace my_vk_app {
+namespace wo_lum {
 
   namespace {
     void printLayers(const std::vector<vk::LayerProperties>& layerPropertiesVector) {

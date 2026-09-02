@@ -6,7 +6,7 @@
 #include <iostream>
 #include <stdexcept>
 
-namespace my_vk_app {
+namespace wo_lum {
   vk::raii::Instance createInstance(
     const vk::raii::Context  &context,
     const std::vector<char const*> &requiredWindowExtensions

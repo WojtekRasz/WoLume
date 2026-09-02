@@ -2,20 +2,19 @@
 #define DEVICE_HPP
 #include <vulkan/vulkan_raii.hpp>
 
-namespace my_vk_app {
+namespace wo_lum {
 
-  struct QueueFamilyIndices {
-    std::optional<uint32_t> graphicsFamily;
-
-    bool isComplete() const {
-      return graphicsFamily.has_value();
-    }
+  struct DeviceContext {
+    vk::raii::PhysicalDevice physicalDevice{nullptr};
+    uint32_t graphicsQueueFamilyIndex{0};
+    vk::raii::Device device{nullptr};
+    vk::Queue graphicsQueue{nullptr};
   };
 
-  vk::raii::PhysicalDevice pickPhysicalDevice( const vk::raii::Instance &instance );
-  QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice);
-  vk::raii::Device createLogicalDevice( const vk::raii::PhysicalDevice &physicalDevice, const QueueFamilyIndices& indices );
-  vk::raii::Queue getQueueHandle( const vk::raii::Device& logicalDevice, uint32_t queueFamilyIndex, uint32_t queueIndex = 0 );
+  DeviceContext createDeviceContext(
+    const vk::raii::Instance& instance,
+    const vk::raii::SurfaceKHR& surface
+  );
 
 }
 

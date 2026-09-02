@@ -5,8 +5,9 @@
 #include <GLFW/glfw3.h>
 #include <vector>
 #include <cstdint>
+#include <vulkan/vulkan_raii.hpp>
 
-namespace my_vk_app {
+namespace wo_lum {
   class Window {
   public:
     Window(uint32_t width, uint32_t height, const char* title);
@@ -15,11 +16,13 @@ namespace my_vk_app {
     Window(const Window&) = delete;
     Window& operator=(const Window&) = delete;
 
-    bool shouldClose() const;
-    void pollEvents() const;
+    [[nodiscard]] bool shouldClose() const;
+    static void pollEvents() ;
 
-    std::vector<const char*> getRequiredExtensions() const;
-    GLFWwindow* getNativeHandle() const { return window; }
+    static std::vector<const char*> getRequiredExtensions() ;
+    [[nodiscard]] GLFWwindow* getNativeHandle() const { return window; }
+
+    [[nodiscard]] vk::raii::SurfaceKHR createSurface(const vk::raii::Instance& instance) const;
 
   private:
     GLFWwindow* window{nullptr};
