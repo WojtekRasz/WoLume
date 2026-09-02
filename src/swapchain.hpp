@@ -11,6 +11,7 @@ namespace wo_lum {
   struct SwapChainContext {
     vk::raii::SwapchainKHR swapChain = nullptr;
     std::vector<vk::Image> images;
+    std::vector<vk::raii::ImageView> imageViews;
     vk::SurfaceFormatKHR   surfaceFormat;
     vk::Extent2D           extent;
   };

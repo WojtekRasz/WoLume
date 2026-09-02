@@ -44,6 +44,7 @@ namespace wo_lum{
       return minImageCount;
     }
 
+
   }
 
   SwapChainContext createSwapChainContext(
@@ -63,21 +64,44 @@ namespace wo_lum{
     std::vector<vk::PresentModeKHR> availablePresentModes = deviceContext.physicalDevice.getSurfacePresentModesKHR( *surface );
 
 
-    vk::SwapchainCreateInfoKHR swapChainCreateInfo{.surface          = *surface,
-                                               .minImageCount    = minImageCount,
-                                               .imageFormat      = swapChainContext.surfaceFormat.format,
-                                               .imageColorSpace  = swapChainContext.surfaceFormat.colorSpace,
-                                               .imageExtent      = swapChainContext.extent,
-                                               .imageArrayLayers = 1,
-                                               .imageUsage       = vk::ImageUsageFlagBits::eColorAttachment,
-                                               .imageSharingMode = vk::SharingMode::eExclusive,
-                                               .preTransform     = surfaceCapabilities.currentTransform,
-                                               .compositeAlpha   = vk::CompositeAlphaFlagBitsKHR::eOpaque,
-                                               .presentMode      = chooseSwapPresentMode(availablePresentModes),
-                                               .clipped          = true};
+    vk::SwapchainCreateInfoKHR swapChainCreateInfo{
+      .surface          = *surface,
+      .minImageCount    = minImageCount,
+      .imageFormat      = swapChainContext.surfaceFormat.format,
+      .imageColorSpace  = swapChainContext.surfaceFormat.colorSpace,
+      .imageExtent      = swapChainContext.extent,
+      .imageArrayLayers = 1,
+      .imageUsage       = vk::ImageUsageFlagBits::eColorAttachment,
+      .imageSharingMode = vk::SharingMode::eExclusive,
+      .preTransform     = surfaceCapabilities.currentTransform,
+      .compositeAlpha   = vk::CompositeAlphaFlagBitsKHR::eOpaque,
+      .presentMode      = chooseSwapPresentMode(availablePresentModes),
+      .clipped          = true};
 
     swapChainContext.swapChain = vk::raii::SwapchainKHR( deviceContext.device, swapChainCreateInfo );
     swapChainContext.images = swapChainContext.swapChain.getImages();
+
+    assert(swapChainContext.imageViews.empty());
+
+    vk::ImageViewCreateInfo imageViewCreateInfo{
+      .viewType         = vk::ImageViewType::e2D,
+      .format           = swapChainContext.surfaceFormat.format,
+      .subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 } };
+
+    imageViewCreateInfo.components = {
+      .r = vk::ComponentSwizzle::eIdentity,
+      .g = vk::ComponentSwizzle::eIdentity,
+      .b = vk::ComponentSwizzle::eIdentity,
+      .a = vk::ComponentSwizzle::eIdentity
+    };
+
+    for (auto &image : swapChainContext.images)
+    {
+      imageViewCreateInfo.image = image;
+      swapChainContext.imageViews.emplace_back( deviceContext.device, imageViewCreateInfo );
+    }
+
+
 
     return swapChainContext;
   };
