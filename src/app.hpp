@@ -39,6 +39,8 @@ namespace wo_lum {
     vk::raii::DebugUtilsMessengerEXT debugMessenger = nullptr;
     DeviceContext deviceContext;
     SwapChainContext swapChainContext;
+    vk::raii::Pipeline pipeline = nullptr;
+
   };
 }
 

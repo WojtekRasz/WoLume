@@ -1,6 +1,7 @@
 #include "app.hpp"
 
 #include "device.hpp"
+#include "pipeline.hpp"
 
 namespace wo_lum {
   App::App():
@@ -18,7 +19,7 @@ namespace wo_lum {
     surface = window.createSurface(instance);
     deviceContext = createDeviceContext(instance, surface);
     swapChainContext = createSwapChainContext(deviceContext, surface, window);
-
+    pipeline = createGraphicsPipeline(deviceContext.device, swapChainContext);
   }
 
   void App::mainLoop(){
