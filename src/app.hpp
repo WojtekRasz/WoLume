@@ -15,6 +15,7 @@
 #include <iostream>
 #include <stdexcept>
 
+#include "renderer.hpp"
 #include "swapchain.hpp"
 
 
@@ -29,19 +30,10 @@ namespace wo_lum {
     }
 
   private:
-    void initVulkan();
     void mainLoop();
 
     Window window;
-    vk::raii::Context context;
-    vk::raii::Instance instance = nullptr;
-    vk::raii::SurfaceKHR surface = nullptr;
-    vk::raii::DebugUtilsMessengerEXT debugMessenger = nullptr;
-    DeviceContext deviceContext;
-    SwapChainContext swapChainContext;
-    vk::raii::Pipeline pipeline = nullptr;
-    vk::raii::CommandPool commandPool = nullptr;
-    vk::raii::CommandBuffer commandBuffer = nullptr;
+    Renderer renderer;
 
   };
 }
