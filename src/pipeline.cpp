@@ -39,7 +39,7 @@ namespace wo_lum{
 
 
   vk::raii::Pipeline createGraphicsPipeline(const vk::raii::Device &device, const SwapChainContext &swapChainContext) {
-    auto shaderCode = readFile("shaders/slang.spv");
+    auto shaderCode = readFile("../shaders/slang.spv");
     auto shaderModule = createShaderModule(shaderCode, device);
 
     vk::PipelineShaderStageCreateInfo vertShaderStageInfo{ .stage = vk::ShaderStageFlagBits::eVertex, .module = shaderModule,  .pName = "vertMain" };

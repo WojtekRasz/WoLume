@@ -55,20 +55,12 @@ add_executable(${PROJECT_NAME}
         src/main.cpp
         src/config.hpp
         src/app.cpp
-        src/app.hpp
         src/instance.cpp
-        src/instance.hpp
         src/window.cpp
-        src/window.hpp
         src/debug_messenger.cpp
-        src/debug_messenger.hpp
-        src/device.hpp
         src/device.cpp
-        src/swapchain.hpp
         src/swapchain.cpp
-        src/pipeline.hpp
         src/pipeline.cpp
-        src/command_buffers.hpp
         src/command_buffers.cpp
 )
 

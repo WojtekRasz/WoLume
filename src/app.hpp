@@ -40,6 +40,8 @@ namespace wo_lum {
     DeviceContext deviceContext;
     SwapChainContext swapChainContext;
     vk::raii::Pipeline pipeline = nullptr;
+    vk::raii::CommandPool commandPool = nullptr;
+    vk::raii::CommandBuffer commandBuffer = nullptr;
 
   };
 }

@@ -1,5 +1,6 @@
 #include "app.hpp"
 
+#include "command_buffers.hpp"
 #include "device.hpp"
 #include "pipeline.hpp"
 
@@ -20,6 +21,8 @@ namespace wo_lum {
     deviceContext = createDeviceContext(instance, surface);
     swapChainContext = createSwapChainContext(deviceContext, surface, window);
     pipeline = createGraphicsPipeline(deviceContext.device, swapChainContext);
+    commandPool = createCommandPool(deviceContext);
+    commandBuffer = createCommandBuffer(deviceContext, commandPool);
   }
 
   void App::mainLoop(){
