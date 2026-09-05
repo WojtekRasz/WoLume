@@ -15,6 +15,7 @@ namespace wo_lum {
   void App::mainLoop(){
     while (!window.shouldClose()) {
       Window::pollEvents();
+      renderer.drawFrame();
     }
   }
 }

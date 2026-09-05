@@ -8,7 +8,7 @@
 namespace wo_lum {
 
   vk::raii::CommandPool createCommandPool(const DeviceContext &deviceContext);
-  vk::raii::CommandBuffer createCommandBuffer(const DeviceContext &deviceContext, const vk::raii::CommandPool &commandPool);
+  std::vector<vk::raii::CommandBuffer> createCommandBuffers(const DeviceContext &deviceContext, const vk::raii::CommandPool &commandPool);
 
 }
 

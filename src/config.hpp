@@ -28,6 +28,8 @@ namespace config {
     inline constexpr const char* appName    = "Vulkan Renderer";
     inline constexpr const char* engineName = "Custom Engine";
 
+    constexpr int MAX_FRAMES_IN_FLIGHT = 2;
+
 #ifdef NDEBUG
     inline constexpr bool enableValidationLayers = false;
 #else

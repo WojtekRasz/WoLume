@@ -110,13 +110,16 @@ namespace wo_lum {
       };
 
       vk::StructureChain<vk::PhysicalDeviceFeatures2,
-                     vk::PhysicalDeviceVulkan11Features,
-                     vk::PhysicalDeviceVulkan13Features,
-                     vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>
+        vk::PhysicalDeviceVulkan11Features,
+        vk::PhysicalDeviceVulkan13Features,
+        vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>
       featureChain = {
         {},                                    // vk::PhysicalDeviceFeatures2 (empty for now)
         {.shaderDrawParameters = true},        // Enable shader draw parameters from Vulkan 1.1
-        {.dynamicRendering = true},            // Enable dynamic rendering from Vulkan 1.3
+        {
+          .synchronization2 = true,
+          .dynamicRendering = true
+        },            // Enable dynamic rendering from Vulkan 1.3
         {.extendedDynamicState = true}         // Enable extended dynamic state from the extension
       };
 
