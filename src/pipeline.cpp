@@ -6,6 +6,7 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "swapchain.hpp"
+#include "vertex.hpp"
 
 namespace wo_lum{
 
@@ -53,7 +54,14 @@ namespace wo_lum{
       .pDynamicStates = dynamicStates.data()
     };
 
-    vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
+    auto bindingDescription = Vertex::getBindingDescription();
+    auto attributeDescriptions = Vertex::getAttributeDescriptions();
+    vk::PipelineVertexInputStateCreateInfo vertexInputInfo{
+      .vertexBindingDescriptionCount   = 1,
+      .pVertexBindingDescriptions      = &bindingDescription,
+      .vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size()),
+      .pVertexAttributeDescriptions    = attributeDescriptions.data()
+    };
 
     vk::PipelineInputAssemblyStateCreateInfo inputAssembly{
       .topology = vk::PrimitiveTopology::eTriangleList

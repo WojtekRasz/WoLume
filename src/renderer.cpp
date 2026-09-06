@@ -1,5 +1,7 @@
 #include "renderer.hpp"
 
+#include "index.hpp"
+
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
 #include "command_buffers.hpp"
@@ -21,6 +23,8 @@ namespace wo_lum {
     swapChainContext = createSwapChainContext(deviceContext, surface, window);
     pipeline = createGraphicsPipeline(deviceContext.device, swapChainContext);
     commandPool = createCommandPool(deviceContext);
+    vertexBuffer = createVertexBuffer(deviceContext, commandPool);
+    indexBuffer = createIndexBuffer(deviceContext, commandPool);
     commandBuffers = createCommandBuffers(deviceContext, commandPool);
     createSyncObjects();
   }
@@ -67,6 +71,9 @@ namespace wo_lum {
     commandBuffer.beginRendering(renderingInfo);
 
     commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *pipeline);
+    commandBuffer.bindVertexBuffers(0, *vertexBuffer.buffer, {0});
+    commandBuffers[frameIndex].bindIndexBuffer(*indexBuffer.buffer, 0, vk::IndexType::eUint16);
+
     commandBuffer.setViewport(
       0,
       vk::Viewport(
@@ -83,7 +90,7 @@ namespace wo_lum {
       vk::Rect2D(vk::Offset2D(0, 0), swapChainContext.extent)
     );
 
-    commandBuffer.draw(3, 1, 0, 0);
+    commandBuffer.drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
     commandBuffer.endRendering();
 
     TransitionImageLayout(

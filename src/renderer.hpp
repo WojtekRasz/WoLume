@@ -1,5 +1,6 @@
 #ifndef RENDERER_HPP
 #define RENDERER_HPP
+#include "vertex.hpp"
 
 constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -38,6 +39,9 @@ namespace wo_lum {
     DeviceContext deviceContext;
     SwapChainContext swapChainContext;
     vk::raii::Pipeline pipeline = nullptr;
+
+    BufferContext vertexBuffer;
+    BufferContext indexBuffer;
 
     vk::raii::CommandPool commandPool = nullptr;
     std::vector<vk::raii::CommandBuffer> commandBuffers;

@@ -72,6 +72,11 @@ add_executable(${PROJECT_NAME}
         src/command_buffers.hpp
         src/renderer.cpp
         src/renderer.hpp
+        src/vertex.hpp
+        src/vertex.cpp
+        src/buffer.hpp
+        src/buffer.cpp
+        src/index.hpp
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE

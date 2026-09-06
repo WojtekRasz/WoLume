@@ -5,9 +5,6 @@
 
 namespace wo_lum {
 
-  namespace {
-
-  }
 
   vk::raii::CommandPool createCommandPool(const DeviceContext &deviceContext) {
     vk::CommandPoolCreateInfo poolInfo{
@@ -26,6 +23,24 @@ namespace wo_lum {
     };
 
     return vk::raii::CommandBuffers{deviceContext.device, allocInfo};
+  }
+
+  void copyBuffer(
+    const DeviceContext &deviceContext,
+    const vk::raii::CommandPool &commandPool,
+    vk::raii::Buffer &srcBuffer,
+    vk::raii::Buffer &dstBuffer,
+    const vk::DeviceSize size
+  ){
+    vk::CommandBufferAllocateInfo allocInfo{ .commandPool = commandPool, .level = vk::CommandBufferLevel::ePrimary, .commandBufferCount = 1 };
+    vk::raii::CommandBuffer commandCopyBuffer = std::move(deviceContext.device.allocateCommandBuffers(allocInfo).front());
+
+    commandCopyBuffer.begin({.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
+    commandCopyBuffer.copyBuffer(*srcBuffer, *dstBuffer, vk::BufferCopy(0, 0, size));
+    commandCopyBuffer.end();
+
+    deviceContext.graphicsQueue.submit(vk::SubmitInfo{.commandBufferCount = 1, .pCommandBuffers = &*commandCopyBuffer}, nullptr);
+    deviceContext.graphicsQueue.waitIdle();
   }
 
 
