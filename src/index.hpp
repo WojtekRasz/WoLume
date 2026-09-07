@@ -13,8 +13,7 @@ namespace wo_lum {
     0, 1, 2, 2, 3, 0
   };
 
-  BufferContext createIndexBuffer(const DeviceContext &deviceContext, const vk::raii::CommandPool &commandPool)
-  {
+  BufferContext createIndexBuffer(const DeviceContext &deviceContext, const vk::raii::CommandPool &commandPool){
     vk::DeviceSize bufferSize = sizeof(indices[0]) * indices.size();
 
     BufferContext stagingBuffer = createBufferContext(

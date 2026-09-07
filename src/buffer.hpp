@@ -8,6 +8,7 @@ namespace wo_lum{
   struct BufferContext {
     vk::raii::Buffer buffer = nullptr;
     vk::raii::DeviceMemory memory = nullptr;
+    void *mapped = nullptr;
   };
 
   BufferContext createBufferContext(

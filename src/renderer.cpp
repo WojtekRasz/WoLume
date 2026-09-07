@@ -1,9 +1,15 @@
 #include "renderer.hpp"
 
-#include "index.hpp"
+#include "descriptor.hpp"
 
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
+#include <glm/gtc/matrix_transform.hpp>
+
+#include <chrono>
+
+#include "index.hpp"
+#include "uniform.hpp"
 #include "command_buffers.hpp"
 #include "config.hpp"
 #include "debug_messenger.hpp"
@@ -21,10 +27,16 @@ namespace wo_lum {
     surface = window.createSurface(instance);
     deviceContext = createDeviceContext(instance, surface);
     swapChainContext = createSwapChainContext(deviceContext, surface, window);
-    pipeline = createGraphicsPipeline(deviceContext.device, swapChainContext);
+    descriptorSetLayout = createDescriptorSetLayout(deviceContext);
+    auto pipelineContext = createGraphicsPipeline(deviceContext.device, swapChainContext, descriptorSetLayout);
+    pipelineLayout = std::move(pipelineContext.first);
+    pipeline = std::move(pipelineContext.second);
     commandPool = createCommandPool(deviceContext);
     vertexBuffer = createVertexBuffer(deviceContext, commandPool);
     indexBuffer = createIndexBuffer(deviceContext, commandPool);
+    uniformBuffers = createUniformBuffers(deviceContext);
+    descriptorPool = createDescriptorPool(deviceContext);
+    descriptorSets = createDescriptorSets(deviceContext, uniformBuffers, descriptorSetLayout, descriptorPool);
     commandBuffers = createCommandBuffers(deviceContext, commandPool);
     createSyncObjects();
   }
@@ -74,13 +86,14 @@ namespace wo_lum {
     commandBuffer.bindVertexBuffers(0, *vertexBuffer.buffer, {0});
     commandBuffers[frameIndex].bindIndexBuffer(*indexBuffer.buffer, 0, vk::IndexType::eUint16);
 
+
     commandBuffer.setViewport(
       0,
       vk::Viewport(
         0.0f,
-        0.0f,
-        static_cast<float>(swapChainContext.extent.width),
         static_cast<float>(swapChainContext.extent.height),
+        static_cast<float>(swapChainContext.extent.width),
+        -static_cast<float>(swapChainContext.extent.height),
         0.0f,
         1.0f
       )
@@ -90,6 +103,12 @@ namespace wo_lum {
       vk::Rect2D(vk::Offset2D(0, 0), swapChainContext.extent)
     );
 
+    commandBuffer.bindDescriptorSets(
+      vk::PipelineBindPoint::eGraphics,
+      pipelineLayout,
+      0,
+      *descriptorSets[frameIndex],
+      nullptr);
     commandBuffer.drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
     commandBuffer.endRendering();
 
@@ -115,6 +134,8 @@ namespace wo_lum {
     deviceContext.device.resetFences(*inFlightFences[frameIndex]);
 
     auto [result, imageIndex] = swapChainContext.swapChain.acquireNextImage(UINT64_MAX, *presentCompleteSemaphores[frameIndex], nullptr);
+
+    updateUniformBuffer(frameIndex);
 
     commandBuffers[frameIndex].reset();
     recordCommandBuffer(imageIndex);
@@ -146,7 +167,7 @@ namespace wo_lum {
         break;        // an unexpected result is returned!
     }
 
-    frameIndex = (frameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
+    frameIndex = (frameIndex + 1) % config::MAX_FRAMES_IN_FLIGHT;
   }
 
   void Renderer::createSyncObjects() {
@@ -157,7 +178,7 @@ namespace wo_lum {
       renderFinishedSemaphores.emplace_back(deviceContext.device, vk::SemaphoreCreateInfo());
     }
 
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    for (size_t i = 0; i < config::MAX_FRAMES_IN_FLIGHT; i++)
     {
       presentCompleteSemaphores.emplace_back(deviceContext.device, vk::SemaphoreCreateInfo());
       inFlightFences.emplace_back(deviceContext.device, vk::FenceCreateInfo{.flags = vk::FenceCreateFlagBits::eSignaled});
@@ -196,6 +217,25 @@ namespace wo_lum {
       .pImageMemoryBarriers    = &barrier
     };
     commandBuffers[frameIndex].pipelineBarrier2(dependency_info);
+  }
+
+  void Renderer::updateUniformBuffer(uint32_t currentImage){
+    static auto startTime = std::chrono::high_resolution_clock::now();
+
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    float time       = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
+    UniformBufferObject ubo{};
+    ubo.model = rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view = lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.proj = glm::perspective(
+      glm::radians(45.0f),
+      static_cast<float>(swapChainContext.extent.width) / static_cast<float>(swapChainContext.extent.height),
+      0.1f,
+      10.0f
+    );
+
+    memcpy(uniformBuffers[currentImage].mapped, &ubo, sizeof(ubo));
   }
 
 

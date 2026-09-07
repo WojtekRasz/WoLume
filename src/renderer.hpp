@@ -2,10 +2,8 @@
 #define RENDERER_HPP
 #include "vertex.hpp"
 
-constexpr int MAX_FRAMES_IN_FLIGHT = 2;
-
 #include <vulkan/vulkan_raii.hpp>
-
+#include <glm/glm.hpp>
 
 #include "device.hpp"
 #include "swapchain.hpp"
@@ -31,6 +29,7 @@ namespace wo_lum {
       vk::PipelineStageFlags2 dst_stage_mask
     ) const;
     void createSyncObjects();
+    void updateUniformBuffer(uint32_t currentImage);
 
     vk::raii::Context context;
     vk::raii::Instance instance = nullptr;
@@ -38,10 +37,17 @@ namespace wo_lum {
     vk::raii::DebugUtilsMessengerEXT debugMessenger = nullptr;
     DeviceContext deviceContext;
     SwapChainContext swapChainContext;
+
+    vk::raii::DescriptorSetLayout descriptorSetLayout = nullptr;
+    vk::raii::PipelineLayout pipelineLayout = nullptr;
     vk::raii::Pipeline pipeline = nullptr;
 
     BufferContext vertexBuffer;
     BufferContext indexBuffer;
+    std::vector<BufferContext> uniformBuffers;
+
+    vk::raii::DescriptorPool descriptorPool = nullptr;
+    std::vector<vk::raii::DescriptorSet> descriptorSets;
 
     vk::raii::CommandPool commandPool = nullptr;
     std::vector<vk::raii::CommandBuffer> commandBuffers;

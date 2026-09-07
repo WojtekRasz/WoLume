@@ -39,7 +39,11 @@ namespace wo_lum{
   }
 
 
-  vk::raii::Pipeline createGraphicsPipeline(const vk::raii::Device &device, const SwapChainContext &swapChainContext) {
+  std::pair<vk::raii::PipelineLayout, vk::raii::Pipeline> createGraphicsPipeline(
+    const vk::raii::Device &device,
+    const SwapChainContext &swapChainContext,
+    const vk::raii::DescriptorSetLayout & descriptorSetLayout
+  ) {
     auto shaderCode = readFile("../shaders/slang.spv");
     auto shaderModule = createShaderModule(shaderCode, device);
 
@@ -92,7 +96,7 @@ namespace wo_lum{
       .rasterizerDiscardEnable = vk::False,
       .polygonMode             = vk::PolygonMode::eFill,
       .cullMode                = vk::CullModeFlagBits::eBack,
-      .frontFace               = vk::FrontFace::eClockwise,
+      .frontFace               = vk::FrontFace::eCounterClockwise,
       .depthBiasEnable         = vk::False,
       .lineWidth               = 1.0f
     };
@@ -124,7 +128,11 @@ namespace wo_lum{
     };
 
     vk::raii::PipelineLayout pipelineLayout = nullptr;
-    vk::PipelineLayoutCreateInfo pipelineLayoutInfo{.setLayoutCount = 0, .pushConstantRangeCount = 0};
+    vk::PipelineLayoutCreateInfo pipelineLayoutInfo{
+      .setLayoutCount = 1,
+      .pSetLayouts = &*descriptorSetLayout,
+      .pushConstantRangeCount = 0
+    };
 
     pipelineLayout = vk::raii::PipelineLayout(device, pipelineLayoutInfo);
 
@@ -147,7 +155,9 @@ namespace wo_lum{
       }
     };
 
-    return vk::raii::Pipeline(device, nullptr, pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>());
+    vk::raii::Pipeline pipeline{device, nullptr, pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>()};
+
+    return {std::move(pipelineLayout), std::move(pipeline)};
   }
 
 }

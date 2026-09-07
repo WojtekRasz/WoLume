@@ -77,6 +77,10 @@ add_executable(${PROJECT_NAME}
         src/buffer.hpp
         src/buffer.cpp
         src/index.hpp
+        src/uniform.hpp
+        src/uniform.cpp
+        src/descriptor.hpp
+        src/descriptor.cpp
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
