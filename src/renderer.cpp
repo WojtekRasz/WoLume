@@ -23,11 +23,11 @@ namespace wo_lume {
     instance(createInstance(context, Window::getRequiredExtensions())),
     debugMessenger(config::enableValidationLayers ? createDebugMessenger(instance) : nullptr),
     surface(instance, window),
-    graphicDevice(instance, surface)
+    graphicDevice(instance, surface),
+    swapChain(graphicDevice, surface, window)
   {
-    swapChainContext = createSwapChainContext(graphicDevice, surface.getVkSurfaceKhr(), window);
     descriptorSetLayout = createDescriptorSetLayout(graphicDevice);
-    auto pipelineContext = createGraphicsPipeline(graphicDevice.getLogicalDevice(), swapChainContext, descriptorSetLayout);
+    auto pipelineContext = createGraphicsPipeline(graphicDevice.getLogicalDevice(), swapChain, descriptorSetLayout);
     pipelineLayout = std::move(pipelineContext.first);
     pipeline = std::move(pipelineContext.second);
     commandPool = createCommandPool(graphicDevice);
@@ -65,7 +65,7 @@ namespace wo_lume {
 
     constexpr vk::ClearValue clearColor = vk::ClearColorValue(0.02f, 0.00f, 0.02f, 1.0f);
     vk::RenderingAttachmentInfo attachmentInfo = {
-      .imageView   = swapChainContext.imageViews[imageIndex],
+      .imageView   = swapChain.getImageView(imageIndex),
       .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
       .loadOp      = vk::AttachmentLoadOp::eClear,
       .storeOp     = vk::AttachmentStoreOp::eStore,
@@ -73,7 +73,7 @@ namespace wo_lume {
     };
 
     const vk::RenderingInfo renderingInfo = {
-      .renderArea           = {.offset = {0, 0}, .extent = swapChainContext.extent},
+      .renderArea           = {.offset = {0, 0}, .extent = swapChain.getExtent()},
       .layerCount           = 1,
       .colorAttachmentCount = 1,
       .pColorAttachments    = &attachmentInfo
@@ -90,16 +90,16 @@ namespace wo_lume {
       0,
       vk::Viewport(
         0.0f,
-        static_cast<float>(swapChainContext.extent.height),
-        static_cast<float>(swapChainContext.extent.width),
-        -static_cast<float>(swapChainContext.extent.height),
+        static_cast<float>(swapChain.getExtent().height),
+        static_cast<float>(swapChain.getExtent().width),
+        -static_cast<float>(swapChain.getExtent().height),
         0.0f,
         1.0f
       )
     );
     commandBuffer.setScissor(
       0,
-      vk::Rect2D(vk::Offset2D(0, 0), swapChainContext.extent)
+      vk::Rect2D(vk::Offset2D(0, 0), swapChain.getExtent())
     );
 
     commandBuffer.bindDescriptorSets(
@@ -132,7 +132,7 @@ namespace wo_lume {
     }
     graphicDevice.getLogicalDevice().resetFences(*inFlightFences[frameIndex]);
 
-    auto [result, imageIndex] = swapChainContext.swapChain.acquireNextImage(UINT64_MAX, *presentCompleteSemaphores[frameIndex], nullptr);
+    auto [result, imageIndex] = swapChain.getVkSwapChain().acquireNextImage(UINT64_MAX, *presentCompleteSemaphores[frameIndex], nullptr);
 
     updateUniformBuffer(frameIndex);
 
@@ -152,7 +152,7 @@ namespace wo_lume {
     const vk::PresentInfoKHR presentInfoKHR{.waitSemaphoreCount = 1,
                                             .pWaitSemaphores    = &*renderFinishedSemaphores[imageIndex],
                                             .swapchainCount     = 1,
-                                            .pSwapchains        = &*swapChainContext.swapChain,
+                                            .pSwapchains        = &*swapChain.getVkSwapChain(),
                                             .pImageIndices      = &imageIndex};
     result = graphicDevice.getGraphicsQueue().presentKHR(presentInfoKHR);
     switch (result)
@@ -172,7 +172,7 @@ namespace wo_lume {
   void Renderer::createSyncObjects() {
     assert(presentCompleteSemaphores.empty() && renderFinishedSemaphores.empty() && inFlightFences.empty());
 
-    for (size_t i = 0; i < swapChainContext.images.size(); i++)
+    for (size_t i = 0; i < swapChain.getImagesCount(); i++)
     {
       renderFinishedSemaphores.emplace_back(graphicDevice.getLogicalDevice(), vk::SemaphoreCreateInfo());
     }
@@ -203,7 +203,7 @@ namespace wo_lume {
       .newLayout           = new_layout,
       .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
       .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-      .image               = swapChainContext.images[imageIndex],
+      .image               = swapChain.getImage(imageIndex),
       .subresourceRange    = {
         .aspectMask     = vk::ImageAspectFlagBits::eColor,
         .baseMipLevel   = 0,
@@ -229,7 +229,7 @@ namespace wo_lume {
     ubo.view = lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     ubo.proj = glm::perspective(
       glm::radians(45.0f),
-      static_cast<float>(swapChainContext.extent.width) / static_cast<float>(swapChainContext.extent.height),
+      static_cast<float>(swapChain.getExtent().width) / static_cast<float>(swapChain.getExtent().height),
       0.1f,
       10.0f
     );

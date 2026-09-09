@@ -41,7 +41,7 @@ namespace wo_lume{
 
   std::pair<vk::raii::PipelineLayout, vk::raii::Pipeline> createGraphicsPipeline(
     const vk::raii::Device &device,
-    const SwapChainContext &swapChainContext,
+    const SwapChain &swapChainContext,
     const vk::raii::DescriptorSetLayout & descriptorSetLayout
   ) {
     auto shaderCode = readFile("../shaders/slang.spv");
@@ -74,14 +74,14 @@ namespace wo_lume{
     vk::Viewport viewport{
       0.0f,
       0.0f,
-      static_cast<float>(swapChainContext.extent.width),
-      static_cast<float>(swapChainContext.extent.height),
+      static_cast<float>(swapChainContext.getExtent().width),
+      static_cast<float>(swapChainContext.getExtent().height),
       0.0f, 1.0f
     };
 
     vk::Rect2D scissor{
       vk::Offset2D{ .x = 0, .y = 0 },
-      swapChainContext.extent
+      swapChainContext.getExtent()
     };
 
     vk::PipelineViewportStateCreateInfo viewportState{
@@ -151,7 +151,7 @@ namespace wo_lume{
        .renderPass          = nullptr
       },
       {
-        .colorAttachmentCount = 1, .pColorAttachmentFormats = &swapChainContext.surfaceFormat.format
+        .colorAttachmentCount = 1, .pColorAttachmentFormats = &swapChainContext.getSurfaceFormat().format
       }
     };
 

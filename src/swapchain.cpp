@@ -47,29 +47,25 @@ namespace wo_lume{
 
   }
 
-  SwapChainContext createSwapChainContext(
-    const GraphicDevice &deviceContext,
-    const vk::raii::SurfaceKHR &surface,
-    const Window &window
-  ) {
-    SwapChainContext swapChainContext;
+  SwapChain::SwapChain(const GraphicDevice &deviceContext, const WindowSurface &surface, const Window &window) {
 
-    vk::SurfaceCapabilitiesKHR surfaceCapabilities = deviceContext.getPhysicalDevice().getSurfaceCapabilitiesKHR( *surface );
-    swapChainContext.extent = chooseSwapExtent(surfaceCapabilities, window);
+    vk::SurfaceCapabilitiesKHR surfaceCapabilities = deviceContext.getPhysicalDevice().getSurfaceCapabilitiesKHR( *surface.getVkSurfaceKhr() );
+
+    extent = chooseSwapExtent(surfaceCapabilities, window);
     uint32_t minImageCount = chooseSwapMinImageCount(surfaceCapabilities) + 1;
 
-    std::vector<vk::SurfaceFormatKHR> availableFormats = deviceContext.getPhysicalDevice().getSurfaceFormatsKHR( *surface );
-    swapChainContext.surfaceFormat = chooseSwapSurfaceFormat(availableFormats);
+    std::vector<vk::SurfaceFormatKHR> availableFormats = deviceContext.getPhysicalDevice().getSurfaceFormatsKHR( *surface.getVkSurfaceKhr() );
+    surfaceFormat = chooseSwapSurfaceFormat(availableFormats);
 
-    std::vector<vk::PresentModeKHR> availablePresentModes = deviceContext.getPhysicalDevice().getSurfacePresentModesKHR( *surface );
+    std::vector<vk::PresentModeKHR> availablePresentModes = deviceContext.getPhysicalDevice().getSurfacePresentModesKHR( *surface.getVkSurfaceKhr() );
 
 
     vk::SwapchainCreateInfoKHR swapChainCreateInfo{
-      .surface          = *surface,
+      .surface          = *surface.getVkSurfaceKhr(),
       .minImageCount    = minImageCount,
-      .imageFormat      = swapChainContext.surfaceFormat.format,
-      .imageColorSpace  = swapChainContext.surfaceFormat.colorSpace,
-      .imageExtent      = swapChainContext.extent,
+      .imageFormat      = surfaceFormat.format,
+      .imageColorSpace  = surfaceFormat.colorSpace,
+      .imageExtent      = extent,
       .imageArrayLayers = 1,
       .imageUsage       = vk::ImageUsageFlagBits::eColorAttachment,
       .imageSharingMode = vk::SharingMode::eExclusive,
@@ -78,14 +74,14 @@ namespace wo_lume{
       .presentMode      = chooseSwapPresentMode(availablePresentModes),
       .clipped          = true};
 
-    swapChainContext.swapChain = vk::raii::SwapchainKHR( deviceContext.getLogicalDevice(), swapChainCreateInfo );
-    swapChainContext.images = swapChainContext.swapChain.getImages();
+    swapChain = vk::raii::SwapchainKHR( deviceContext.getLogicalDevice(), swapChainCreateInfo );
+    images = swapChain.getImages();
 
-    assert(swapChainContext.imageViews.empty());
+    assert(imageViews.empty());
 
     vk::ImageViewCreateInfo imageViewCreateInfo{
       .viewType         = vk::ImageViewType::e2D,
-      .format           = swapChainContext.surfaceFormat.format,
+      .format           = surfaceFormat.format,
       .subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 } };
 
     imageViewCreateInfo.components = {
@@ -95,12 +91,11 @@ namespace wo_lume{
       .a = vk::ComponentSwizzle::eIdentity
     };
 
-    for (auto &image : swapChainContext.images)
+    for (auto &image : images)
     {
       imageViewCreateInfo.image = image;
-      swapChainContext.imageViews.emplace_back( deviceContext.getLogicalDevice(), imageViewCreateInfo );
+      imageViews.emplace_back( deviceContext.getLogicalDevice(), imageViewCreateInfo );
     }
-    return swapChainContext;
   };
 }
 

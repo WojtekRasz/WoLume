@@ -36,7 +36,7 @@ namespace wo_lume {
     WindowSurface surface;
     vk::raii::DebugUtilsMessengerEXT debugMessenger = nullptr;
     GraphicDevice graphicDevice;
-    SwapChainContext swapChainContext;
+    SwapChain swapChain;
 
     vk::raii::DescriptorSetLayout descriptorSetLayout = nullptr;
     vk::raii::PipelineLayout pipelineLayout = nullptr;

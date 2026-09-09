@@ -8,20 +8,29 @@
 
 namespace wo_lume {
 
-  struct SwapChainContext {
+  class SwapChain {
+  public:
+    SwapChain(
+      const GraphicDevice &deviceContext,
+      const WindowSurface &surface,
+      const Window &window
+    );
+
+    [[nodiscard]] const vk::raii::SwapchainKHR& getVkSwapChain() const{ return swapChain; }
+    [[nodiscard]] vk::Extent2D getExtent() const{ return extent; }
+    [[nodiscard]] const vk::SurfaceFormatKHR& getSurfaceFormat() const { return surfaceFormat; }
+
+    [[nodiscard]] size_t getImagesCount() const{ return images.size(); }
+    [[nodiscard]] const vk::Image& getImage(const uint32_t index) const { return images[index]; }
+    [[nodiscard]] const vk::raii::ImageView& getImageView(const uint32_t index) const { return imageViews[index]; }
+
+  private:
     vk::raii::SwapchainKHR swapChain = nullptr;
     std::vector<vk::Image> images;
     std::vector<vk::raii::ImageView> imageViews;
-    vk::SurfaceFormatKHR   surfaceFormat;
-    vk::Extent2D           extent;
+    vk::SurfaceFormatKHR surfaceFormat;
+    vk::Extent2D extent;
   };
-
-  SwapChainContext createSwapChainContext(
-    const GraphicDevice &deviceContext,
-    const vk::raii::SurfaceKHR &surface,
-    const Window &window
-  );
-
 }
 
 #endif //SWAPCHAIN_HPP
