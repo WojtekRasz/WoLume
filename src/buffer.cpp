@@ -2,22 +2,21 @@
 
 #include "command_buffers.hpp"
 
-namespace wo_lum {
-
-  BufferContext createBufferContext(
-    const DeviceContext &deviceContext,
+namespace wo_lume {
+  Buffer createBufferContext(
+    const GraphicDevice &deviceContext,
     const vk::DeviceSize size,
     const vk::BufferUsageFlags usage,
     const vk::MemoryPropertyFlags properties
   ) {
-    BufferContext bufferContext;
+    Buffer bufferContext;
     const vk::BufferCreateInfo bufferInfo{
       .size        = size,
       .usage       = usage,
       .sharingMode = vk::SharingMode::eExclusive
     };
 
-    bufferContext.buffer = vk::raii::Buffer{deviceContext.device, bufferInfo};
+    bufferContext.buffer = vk::raii::Buffer{deviceContext.getLogicalDevice(), bufferInfo};
 
     const vk::MemoryRequirements memRequirements = bufferContext.buffer.getMemoryRequirements();
 
@@ -29,7 +28,7 @@ namespace wo_lum {
       )
     };
 
-    bufferContext.memory = vk::raii::DeviceMemory(deviceContext.device, memoryAllocateInfo);
+    bufferContext.memory = vk::raii::DeviceMemory(deviceContext.getLogicalDevice(), memoryAllocateInfo);
     bufferContext.buffer.bindMemory( *bufferContext.memory, 0 );
 
     return bufferContext;

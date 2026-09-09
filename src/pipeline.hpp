@@ -4,7 +4,7 @@
 #include <vulkan/vulkan_raii.hpp>
 #include "swapchain.hpp"
 
-namespace wo_lum {
+namespace wo_lume {
 
   std::pair<vk::raii::PipelineLayout, vk::raii::Pipeline> createGraphicsPipeline(
     const vk::raii::Device &device,

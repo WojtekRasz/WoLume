@@ -17,34 +17,33 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 #include "pipeline.hpp"
 
 
-namespace wo_lum {
+namespace wo_lume {
 
-  Renderer::Renderer(const Window &window) {
-    instance = createInstance(context, Window::getRequiredExtensions());
-    if (config::enableValidationLayers) {
-      debugMessenger = createDebugMessenger(instance);
-    }
-    surface = window.createSurface(instance);
-    deviceContext = createDeviceContext(instance, surface);
-    swapChainContext = createSwapChainContext(deviceContext, surface, window);
-    descriptorSetLayout = createDescriptorSetLayout(deviceContext);
-    auto pipelineContext = createGraphicsPipeline(deviceContext.device, swapChainContext, descriptorSetLayout);
+  Renderer::Renderer(const Window &window):
+    instance(createInstance(context, Window::getRequiredExtensions())),
+    debugMessenger(config::enableValidationLayers ? createDebugMessenger(instance) : nullptr),
+    surface(instance, window),
+    graphicDevice(instance, surface)
+  {
+    swapChainContext = createSwapChainContext(graphicDevice, surface.getVkSurfaceKhr(), window);
+    descriptorSetLayout = createDescriptorSetLayout(graphicDevice);
+    auto pipelineContext = createGraphicsPipeline(graphicDevice.getLogicalDevice(), swapChainContext, descriptorSetLayout);
     pipelineLayout = std::move(pipelineContext.first);
     pipeline = std::move(pipelineContext.second);
-    commandPool = createCommandPool(deviceContext);
-    vertexBuffer = createVertexBuffer(deviceContext, commandPool);
-    indexBuffer = createIndexBuffer(deviceContext, commandPool);
-    uniformBuffers = createUniformBuffers(deviceContext);
-    descriptorPool = createDescriptorPool(deviceContext);
-    descriptorSets = createDescriptorSets(deviceContext, uniformBuffers, descriptorSetLayout, descriptorPool);
-    commandBuffers = createCommandBuffers(deviceContext, commandPool);
+    commandPool = createCommandPool(graphicDevice);
+    vertexBuffer = createVertexBuffer(graphicDevice, commandPool);
+    indexBuffer = createIndexBuffer(graphicDevice, commandPool);
+    uniformBuffers = createUniformBuffers(graphicDevice);
+    descriptorPool = createDescriptorPool(graphicDevice);
+    descriptorSets = createDescriptorSets(graphicDevice, uniformBuffers, descriptorSetLayout, descriptorPool);
+    commandBuffers = createCommandBuffers(graphicDevice, commandPool);
     createSyncObjects();
   }
 
   Renderer::~Renderer() {
     // Wstrzymuje CPU do momentu, gdy GPU przetworzy wszystkie kolejki
-    if (deviceContext.device != nullptr) {
-      deviceContext.device.waitIdle();
+    if (graphicDevice.getLogicalDevice() != nullptr) {
+      graphicDevice.getLogicalDevice().waitIdle();
     }
   }
 
@@ -84,7 +83,7 @@ namespace wo_lum {
 
     commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *pipeline);
     commandBuffer.bindVertexBuffers(0, *vertexBuffer.buffer, {0});
-    commandBuffers[frameIndex].bindIndexBuffer(*indexBuffer.buffer, 0, vk::IndexType::eUint16);
+    commandBuffer.bindIndexBuffer(*indexBuffer.buffer, 0, vk::IndexType::eUint16);
 
 
     commandBuffer.setViewport(
@@ -126,12 +125,12 @@ namespace wo_lum {
   }
 
   void Renderer::drawFrame() {
-    auto fenceResult = deviceContext.device.waitForFences(*inFlightFences[frameIndex], vk::True, UINT64_MAX);
+    auto fenceResult = graphicDevice.getLogicalDevice().waitForFences(*inFlightFences[frameIndex], vk::True, UINT64_MAX);
     if (fenceResult != vk::Result::eSuccess)
     {
       throw std::runtime_error("failed to wait for fence!");
     }
-    deviceContext.device.resetFences(*inFlightFences[frameIndex]);
+    graphicDevice.getLogicalDevice().resetFences(*inFlightFences[frameIndex]);
 
     auto [result, imageIndex] = swapChainContext.swapChain.acquireNextImage(UINT64_MAX, *presentCompleteSemaphores[frameIndex], nullptr);
 
@@ -148,14 +147,14 @@ namespace wo_lum {
                                       .pCommandBuffers      = &*commandBuffers[frameIndex],
                                       .signalSemaphoreCount = 1,
                                       .pSignalSemaphores    = &*renderFinishedSemaphores[imageIndex]};
-    deviceContext.graphicsQueue.submit(submitInfo, *inFlightFences[frameIndex]);
+    graphicDevice.getGraphicsQueue().submit(submitInfo, *inFlightFences[frameIndex]);
 
     const vk::PresentInfoKHR presentInfoKHR{.waitSemaphoreCount = 1,
                                             .pWaitSemaphores    = &*renderFinishedSemaphores[imageIndex],
                                             .swapchainCount     = 1,
                                             .pSwapchains        = &*swapChainContext.swapChain,
                                             .pImageIndices      = &imageIndex};
-    result = deviceContext.graphicsQueue.presentKHR(presentInfoKHR);
+    result = graphicDevice.getGraphicsQueue().presentKHR(presentInfoKHR);
     switch (result)
     {
       case vk::Result::eSuccess:
@@ -175,13 +174,13 @@ namespace wo_lum {
 
     for (size_t i = 0; i < swapChainContext.images.size(); i++)
     {
-      renderFinishedSemaphores.emplace_back(deviceContext.device, vk::SemaphoreCreateInfo());
+      renderFinishedSemaphores.emplace_back(graphicDevice.getLogicalDevice(), vk::SemaphoreCreateInfo());
     }
 
     for (size_t i = 0; i < config::MAX_FRAMES_IN_FLIGHT; i++)
     {
-      presentCompleteSemaphores.emplace_back(deviceContext.device, vk::SemaphoreCreateInfo());
-      inFlightFences.emplace_back(deviceContext.device, vk::FenceCreateInfo{.flags = vk::FenceCreateFlagBits::eSignaled});
+      presentCompleteSemaphores.emplace_back(graphicDevice.getLogicalDevice(), vk::SemaphoreCreateInfo());
+      inFlightFences.emplace_back(graphicDevice.getLogicalDevice(), vk::FenceCreateInfo{.flags = vk::FenceCreateFlagBits::eSignaled});
     }
   }
 

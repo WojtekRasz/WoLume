@@ -2,17 +2,18 @@
 #define BUFFER_HPP
 
 #include <vulkan/vulkan_raii.hpp>
-#include "device.hpp"
+#include "graphic_device.hpp"
 
-namespace wo_lum{
-  struct BufferContext {
+namespace wo_lume{
+  struct Buffer {
+
     vk::raii::Buffer buffer = nullptr;
     vk::raii::DeviceMemory memory = nullptr;
     void *mapped = nullptr;
   };
 
-  BufferContext createBufferContext(
-    const DeviceContext &deviceContext,
+  Buffer createBufferContext(
+    const GraphicDevice &deviceContext,
     vk::DeviceSize size,
     vk::BufferUsageFlags usage,
     vk::MemoryPropertyFlags properties

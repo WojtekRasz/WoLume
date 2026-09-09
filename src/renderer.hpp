@@ -5,10 +5,10 @@
 #include <vulkan/vulkan_raii.hpp>
 #include <glm/glm.hpp>
 
-#include "device.hpp"
+#include "graphic_device.hpp"
 #include "swapchain.hpp"
 
-namespace wo_lum {
+namespace wo_lume {
   class Renderer {
   public:
     explicit Renderer(const Window &window);
@@ -32,19 +32,19 @@ namespace wo_lum {
     void updateUniformBuffer(uint32_t currentImage);
 
     vk::raii::Context context;
-    vk::raii::Instance instance = nullptr;
-    vk::raii::SurfaceKHR surface = nullptr;
+    vk::raii::Instance instance;
+    WindowSurface surface;
     vk::raii::DebugUtilsMessengerEXT debugMessenger = nullptr;
-    DeviceContext deviceContext;
+    GraphicDevice graphicDevice;
     SwapChainContext swapChainContext;
 
     vk::raii::DescriptorSetLayout descriptorSetLayout = nullptr;
     vk::raii::PipelineLayout pipelineLayout = nullptr;
     vk::raii::Pipeline pipeline = nullptr;
 
-    BufferContext vertexBuffer;
-    BufferContext indexBuffer;
-    std::vector<BufferContext> uniformBuffers;
+    Buffer vertexBuffer;
+    Buffer indexBuffer;
+    std::vector<Buffer> uniformBuffers;
 
     vk::raii::DescriptorPool descriptorPool = nullptr;
     std::vector<vk::raii::DescriptorSet> descriptorSets;

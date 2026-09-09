@@ -7,9 +7,9 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "buffer.hpp"
-#include "device.hpp"
+#include "graphic_device.hpp"
 
-namespace wo_lum {
+namespace wo_lume {
 
   struct UniformBufferObject{
     glm::mat4 model;
@@ -17,7 +17,7 @@ namespace wo_lum {
     glm::mat4 proj;
   };
 
-  std::vector<BufferContext> createUniformBuffers(const DeviceContext &deviceContext);
+  std::vector<Buffer> createUniformBuffers(const GraphicDevice &deviceContext);
 
 }
 

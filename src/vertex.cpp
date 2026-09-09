@@ -2,13 +2,13 @@
 
 #include "command_buffers.hpp"
 
-namespace wo_lum {
+namespace wo_lume {
 
 
-  BufferContext createVertexBuffer(const DeviceContext &deviceContext, const vk::raii::CommandPool &commandPool) {
+  Buffer createVertexBuffer(const GraphicDevice &deviceContext, const vk::raii::CommandPool &commandPool) {
     const vk::DeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
-    BufferContext stagingBuffer = createBufferContext(
+    Buffer stagingBuffer = createBufferContext(
       deviceContext,
       bufferSize,
       vk::BufferUsageFlagBits::eTransferSrc,
@@ -19,7 +19,7 @@ namespace wo_lum {
     memcpy(data, vertices.data(), bufferSize);
     stagingBuffer.memory.unmapMemory();
 
-    BufferContext vertexBuffer = createBufferContext(
+    Buffer vertexBuffer = createBufferContext(
       deviceContext,
       bufferSize,
       vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst,

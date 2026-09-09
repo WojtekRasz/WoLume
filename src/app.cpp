@@ -1,10 +1,10 @@
 #include "app.hpp"
 
 #include "command_buffers.hpp"
-#include "device.hpp"
+#include "graphic_device.hpp"
 #include "pipeline.hpp"
 
-namespace wo_lum {
+namespace wo_lume {
   App::App():
     window{config::width, config::height, "Humble Window"},
     renderer{window}

@@ -12,8 +12,6 @@
     #define ENGINE_LOG_VULKAN_ENABLED  0
     #define ENGINE_LOG_RENDER_ENABLED  0
 #else
-    // --- TRYB DEBUG ---
-    // Tutaj dowolnie przełączasz (1 = włączone, 0 = wyłączone)
     #define ENGINE_LOG_INFO_ENABLED    1
     #define ENGINE_LOG_WARNING_ENABLED 1
     #define ENGINE_LOG_ERROR_ENABLED   1

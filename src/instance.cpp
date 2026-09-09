@@ -1,24 +1,9 @@
 #include "instance.hpp"
 #include "config.hpp"
 
-namespace wo_lum {
+namespace wo_lume {
 
   namespace {
-    void printLayers(const std::vector<vk::LayerProperties>& layerPropertiesVector) {
-      std::cout << "available layers:\n";
-      for (const auto& layerProperties : layerPropertiesVector) {
-        std::cout << '\t' << layerProperties.layerName << '\n';
-      }
-    }
-
-    void printExtensions(const std::vector<vk::ExtensionProperties>& extensionPropertiesVector) {
-      std::cout << "available extensions:\n";
-
-      for (const auto& extensionProperties : extensionPropertiesVector) {
-        std::cout << '\t' << extensionProperties.extensionName << '\n';
-      }
-    }
-
     void validateLayers(
       const std::vector<vk::LayerProperties>& availableLayersPropertiesVector,
       const std::vector<char const*> &requiredLayers
@@ -54,8 +39,6 @@ namespace wo_lum {
         }
       }
     }
-
-
   }
 
 
@@ -63,7 +46,7 @@ namespace wo_lum {
   vk::raii::Instance createInstance(
     const vk::raii::Context  &context,
     const std::vector<char const*> &requiredWindowExtensions
-    ) {
+  ) {
 
     vk::ApplicationInfo appInfo = config::getAppInfo();
 
@@ -73,9 +56,6 @@ namespace wo_lum {
     if (config::enableValidationLayers) {
       requiredLayers = config::validationLayers;
     }
-#if ENGINE_LOG_VULKAN_ENABLED
-    printLayers(availableLayersProperties);
-#endif
 
     validateLayers(availableLayersProperties, requiredLayers);
 
@@ -87,12 +67,7 @@ namespace wo_lum {
       requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
 
-#if ENGINE_LOG_VULKAN_ENABLED
-    printExtensions(availableExtensionsProperties);
-#endif
-
     validateExtensions(availableExtensionsProperties, requiredExtensions);
-
 
     const vk::InstanceCreateInfo createInfo{
       .pApplicationInfo = &appInfo,

@@ -3,14 +3,14 @@
 #include "buffer.hpp"
 #include "config.hpp"
 
-namespace wo_lum {
+namespace wo_lume {
 
-  std::vector<BufferContext> createUniformBuffers(const DeviceContext &deviceContext){
-    std::vector<BufferContext> uniformBuffers;
+  std::vector<Buffer> createUniformBuffers(const GraphicDevice &deviceContext){
+    std::vector<Buffer> uniformBuffers;
     for (size_t i = 0; i < config::MAX_FRAMES_IN_FLIGHT; i++)
     {
       vk::DeviceSize bufferSize = sizeof(UniformBufferObject);
-      BufferContext uniformBuffer = createBufferContext(
+      Buffer uniformBuffer = createBufferContext(
         deviceContext,
         bufferSize,
         vk::BufferUsageFlagBits::eUniformBuffer,

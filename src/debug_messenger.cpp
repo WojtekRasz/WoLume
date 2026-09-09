@@ -1,7 +1,7 @@
 #include "debug_messenger.hpp"
 #include <iostream>
 
-namespace wo_lum {
+namespace wo_lume {
 
   VKAPI_ATTR vk::Bool32 VKAPI_CALL debugCallback(
       vk::DebugUtilsMessageSeverityFlagBitsEXT severity,

@@ -3,10 +3,10 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "device.hpp"
+#include "graphic_device.hpp"
 #include "window.hpp"
 
-namespace wo_lum {
+namespace wo_lume {
 
   struct SwapChainContext {
     vk::raii::SwapchainKHR swapChain = nullptr;
@@ -17,7 +17,7 @@ namespace wo_lum {
   };
 
   SwapChainContext createSwapChainContext(
-    const DeviceContext &deviceContext,
+    const GraphicDevice &deviceContext,
     const vk::raii::SurfaceKHR &surface,
     const Window &window
   );

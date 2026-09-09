@@ -3,9 +3,9 @@
 #include "config.hpp"
 #include "uniform.hpp"
 
-namespace wo_lum {
+namespace wo_lume {
 
-  vk::raii::DescriptorSetLayout createDescriptorSetLayout(const DeviceContext &deviceContext) {
+  vk::raii::DescriptorSetLayout createDescriptorSetLayout(const GraphicDevice &deviceContext) {
     vk::DescriptorSetLayoutBinding uboLayoutBinding{
       .binding = 0,
       .descriptorType = vk::DescriptorType::eUniformBuffer,
@@ -18,10 +18,10 @@ namespace wo_lum {
       .pBindings = &uboLayoutBinding
     };
 
-    return vk::raii::DescriptorSetLayout{deviceContext.device, layoutInfo};
+    return vk::raii::DescriptorSetLayout{deviceContext.getLogicalDevice(), layoutInfo};
   }
 
-  vk::raii::DescriptorPool createDescriptorPool(const DeviceContext &deviceContext){
+  vk::raii::DescriptorPool createDescriptorPool(const GraphicDevice &deviceContext){
     vk::DescriptorPoolSize poolSize{
       .type = vk::DescriptorType::eUniformBuffer,
       .descriptorCount = config::MAX_FRAMES_IN_FLIGHT
@@ -34,12 +34,12 @@ namespace wo_lum {
       .pPoolSizes = &poolSize
     };
 
-    return vk::raii::DescriptorPool{deviceContext.device, poolInfo};
+    return vk::raii::DescriptorPool{deviceContext.getLogicalDevice(), poolInfo};
   }
 
   std::vector<vk::raii::DescriptorSet> createDescriptorSets(
-    const DeviceContext &deviceContext,
-    const std::vector<BufferContext> &uniformBuffers,
+    const GraphicDevice &deviceContext,
+    const std::vector<Buffer> &uniformBuffers,
     const vk::raii::DescriptorSetLayout &descriptorSetLayout,
     const vk::raii::DescriptorPool &descriptorPool
   ){
@@ -50,7 +50,7 @@ namespace wo_lum {
       .pSetLayouts        = layouts.data()
     };
 
-    std::vector<vk::raii::DescriptorSet> descriptorSets = deviceContext.device.allocateDescriptorSets(allocInfo);
+    std::vector<vk::raii::DescriptorSet> descriptorSets = deviceContext.getLogicalDevice().allocateDescriptorSets(allocInfo);
     for (size_t i = 0; i < config::MAX_FRAMES_IN_FLIGHT; i++){
       vk::DescriptorBufferInfo bufferInfo{ .buffer = uniformBuffers[i].buffer, .offset = 0, .range = sizeof(UniformBufferObject) };
 
@@ -63,7 +63,7 @@ namespace wo_lum {
         .pBufferInfo     = &bufferInfo
       };
 
-      deviceContext.device.updateDescriptorSets(descriptorWrite, {});
+      deviceContext.getLogicalDevice().updateDescriptorSets(descriptorWrite, {});
     }
 
     return descriptorSets;

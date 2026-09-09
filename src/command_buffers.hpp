@@ -3,14 +3,14 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "device.hpp"
+#include "graphic_device.hpp"
 
-namespace wo_lum {
+namespace wo_lume {
 
-  vk::raii::CommandPool createCommandPool(const DeviceContext &deviceContext);
-  std::vector<vk::raii::CommandBuffer> createCommandBuffers(const DeviceContext &deviceContext, const vk::raii::CommandPool &commandPool);
+  vk::raii::CommandPool createCommandPool(const GraphicDevice &deviceContext);
+  std::vector<vk::raii::CommandBuffer> createCommandBuffers(const GraphicDevice &deviceContext, const vk::raii::CommandPool &commandPool);
   void copyBuffer(
-    const DeviceContext &deviceContext,
+    const GraphicDevice &deviceContext,
     const vk::raii::CommandPool &commandPool,
     vk::raii::Buffer &srcBuffer,
     vk::raii::Buffer &dstBuffer,

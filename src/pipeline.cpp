@@ -8,7 +8,7 @@
 #include "swapchain.hpp"
 #include "vertex.hpp"
 
-namespace wo_lum{
+namespace wo_lume{
 
   namespace {
     std::vector<char> readFile(const std::string& filename) {

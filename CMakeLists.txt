@@ -62,8 +62,8 @@ add_executable(${PROJECT_NAME}
         src/window.hpp
         src/debug_messenger.cpp
         src/debug_messenger.hpp
-        src/device.cpp
-        src/device.hpp
+        src/graphic_device.cpp
+        src/graphic_device.hpp
         src/swapchain.cpp
         src/swapchain.hpp
         src/pipeline.cpp
@@ -81,6 +81,7 @@ add_executable(${PROJECT_NAME}
         src/uniform.cpp
         src/descriptor.hpp
         src/descriptor.cpp
+        src/window_surface.hpp
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE

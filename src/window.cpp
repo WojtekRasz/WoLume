@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-namespace wo_lum {
+namespace wo_lume {
 
   Window::Window(uint32_t width, uint32_t height, const char* title) {
     if (!glfwInit()) {

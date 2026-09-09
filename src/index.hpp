@@ -7,16 +7,16 @@
 #include "buffer.hpp"
 #include "command_buffers.hpp"
 
-namespace wo_lum {
+namespace wo_lume {
 
   const std::vector<uint16_t> indices = {
     0, 1, 2, 2, 3, 0
   };
 
-  BufferContext createIndexBuffer(const DeviceContext &deviceContext, const vk::raii::CommandPool &commandPool){
+  Buffer createIndexBuffer(const GraphicDevice &deviceContext, const vk::raii::CommandPool &commandPool){
     vk::DeviceSize bufferSize = sizeof(indices[0]) * indices.size();
 
-    BufferContext stagingBuffer = createBufferContext(
+    Buffer stagingBuffer = createBufferContext(
       deviceContext,
       bufferSize,
       vk::BufferUsageFlagBits::eTransferSrc,
@@ -27,7 +27,7 @@ namespace wo_lum {
     memcpy(data, indices.data(), (size_t) bufferSize);
     stagingBuffer.memory.unmapMemory();
 
-    BufferContext indexBuffer=createBufferContext(
+    Buffer indexBuffer = createBufferContext(
       deviceContext,
       bufferSize,
       vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst,

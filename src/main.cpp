@@ -9,7 +9,7 @@ int main()
 {
   try
   {
-    wo_lum::App app;
+    wo_lume::App app;
     app.run();
   }
   catch (const std::exception& e)

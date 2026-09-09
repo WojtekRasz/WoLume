@@ -1,9 +1,9 @@
 #include "swapchain.hpp"
 
-#include "device.hpp"
+#include "graphic_device.hpp"
 
 
-namespace wo_lum{
+namespace wo_lume{
   namespace {
     vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats) {
       const auto formatIt = std::ranges::find_if(
@@ -48,20 +48,20 @@ namespace wo_lum{
   }
 
   SwapChainContext createSwapChainContext(
-    const DeviceContext &deviceContext,
+    const GraphicDevice &deviceContext,
     const vk::raii::SurfaceKHR &surface,
     const Window &window
   ) {
     SwapChainContext swapChainContext;
 
-    vk::SurfaceCapabilitiesKHR surfaceCapabilities = deviceContext.physicalDevice.getSurfaceCapabilitiesKHR( *surface );
+    vk::SurfaceCapabilitiesKHR surfaceCapabilities = deviceContext.getPhysicalDevice().getSurfaceCapabilitiesKHR( *surface );
     swapChainContext.extent = chooseSwapExtent(surfaceCapabilities, window);
     uint32_t minImageCount = chooseSwapMinImageCount(surfaceCapabilities) + 1;
 
-    std::vector<vk::SurfaceFormatKHR> availableFormats = deviceContext.physicalDevice.getSurfaceFormatsKHR( *surface );
+    std::vector<vk::SurfaceFormatKHR> availableFormats = deviceContext.getPhysicalDevice().getSurfaceFormatsKHR( *surface );
     swapChainContext.surfaceFormat = chooseSwapSurfaceFormat(availableFormats);
 
-    std::vector<vk::PresentModeKHR> availablePresentModes = deviceContext.physicalDevice.getSurfacePresentModesKHR( *surface );
+    std::vector<vk::PresentModeKHR> availablePresentModes = deviceContext.getPhysicalDevice().getSurfacePresentModesKHR( *surface );
 
 
     vk::SwapchainCreateInfoKHR swapChainCreateInfo{
@@ -78,7 +78,7 @@ namespace wo_lum{
       .presentMode      = chooseSwapPresentMode(availablePresentModes),
       .clipped          = true};
 
-    swapChainContext.swapChain = vk::raii::SwapchainKHR( deviceContext.device, swapChainCreateInfo );
+    swapChainContext.swapChain = vk::raii::SwapchainKHR( deviceContext.getLogicalDevice(), swapChainCreateInfo );
     swapChainContext.images = swapChainContext.swapChain.getImages();
 
     assert(swapChainContext.imageViews.empty());
@@ -98,11 +98,8 @@ namespace wo_lum{
     for (auto &image : swapChainContext.images)
     {
       imageViewCreateInfo.image = image;
-      swapChainContext.imageViews.emplace_back( deviceContext.device, imageViewCreateInfo );
+      swapChainContext.imageViews.emplace_back( deviceContext.getLogicalDevice(), imageViewCreateInfo );
     }
-
-
-
     return swapChainContext;
   };
 }

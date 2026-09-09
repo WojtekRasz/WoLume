@@ -1,11 +1,13 @@
-#include "device.hpp"
+#include "graphic_device.hpp"
 
 #include <iostream>
 #include <map>
 
 #include "config.hpp"
+#include "window.hpp"
+#include "window_surface.hpp"
 
-namespace wo_lum {
+namespace wo_lume {
 
   //utils device functions
   namespace {
@@ -62,28 +64,9 @@ namespace wo_lum {
 
       return score;
     }
-
-    std::optional<uint32_t> findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice, const vk::raii::SurfaceKHR &surface) {
-      auto queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
-
-      std::optional<uint32_t> queueIndex = std::nullopt;
-      for (uint32_t qfpIndex = 0; qfpIndex < queueFamilyProperties.size(); qfpIndex++)
-      {
-        if ((queueFamilyProperties[qfpIndex].queueFlags & vk::QueueFlagBits::eGraphics) &&
-            physicalDevice.getSurfaceSupportKHR(qfpIndex, *surface))
-        {
-          // found a queue family that supports both graphics and present
-          queueIndex = qfpIndex;
-          break;
-        }
-      }
-      return queueIndex;
-    }
   }
 
-  //device creation functions
-  namespace{
-    vk::raii::PhysicalDevice pickPhysicalDevice(const vk::raii::Instance &instance) {
+    vk::raii::PhysicalDevice GraphicDevice::pickPhysicalDevice(const vk::raii::Instance &instance) {
       auto physicalDevices = instance.enumeratePhysicalDevices();
       if (physicalDevices.empty()){
         throw std::runtime_error("failed to find GPUs with Vulkan support!");
@@ -100,11 +83,11 @@ namespace wo_lum {
       throw std::runtime_error("failed to find a suitable GPU!");
     }
 
-    vk::raii::Device createLogicalDevice( const vk::raii::PhysicalDevice &physicalDevice, uint32_t queueFamilyIndices ) {
+    vk::raii::Device GraphicDevice::createLogicalDevice() const {
       float queuePriority = 0.5f;
 
       vk::DeviceQueueCreateInfo deviceQueueCreateInfo{
-        .queueFamilyIndex = queueFamilyIndices,
+        .queueFamilyIndex = graphicsQueueFamilyIndex,
         .queueCount = 1,
         .pQueuePriorities = &queuePriority,
       };
@@ -119,7 +102,7 @@ namespace wo_lum {
         {
           .synchronization2 = true,
           .dynamicRendering = true
-        },            // Enable dynamic rendering from Vulkan 1.3
+        },                                        // Enable dynamic rendering from Vulkan 1.3
         {.extendedDynamicState = true}         // Enable extended dynamic state from the extension
       };
 
@@ -132,25 +115,44 @@ namespace wo_lum {
       };
 
       return vk::raii::Device{physicalDevice, deviceCreateInfo};
-    }
   }
 
-  DeviceContext createDeviceContext(
-    const vk::raii::Instance& instance,
-    const vk::raii::SurfaceKHR& surface
-  ) {
-    DeviceContext deviceContext;
+  GraphicDevice::GraphicDevice(const vk::raii::Instance &instance, const WindowSurface &windowSurface) {
+    physicalDevice = pickPhysicalDevice(instance);
 
-    deviceContext.physicalDevice = pickPhysicalDevice(instance);
+    std::optional<uint32_t> _graphicsQueueFamilyIndex = findQueueFamilies(windowSurface.getVkSurfaceKhr(), vk::QueueFlagBits::eGraphics);
 
-    std::optional<uint32_t> _graphicsQueueFamilyIndex = findQueueFamilies(deviceContext.physicalDevice, surface);
-    if ( !_graphicsQueueFamilyIndex.has_value() ) throw std::runtime_error("Cannot find graphics queue family index!");
+    graphicsQueueFamilyIndex = _graphicsQueueFamilyIndex.value();
+    device = createLogicalDevice();
+    graphicsQueue = vk::raii::Queue(device, graphicsQueueFamilyIndex, 0);
 
-    deviceContext.graphicsQueueFamilyIndex = _graphicsQueueFamilyIndex.value();
-    deviceContext.device = createLogicalDevice(deviceContext.physicalDevice, _graphicsQueueFamilyIndex.value());
-    deviceContext.graphicsQueue = vk::raii::Queue(deviceContext.device, deviceContext.graphicsQueueFamilyIndex, 0);
+  }
 
-    return deviceContext;
+  uint32_t GraphicDevice::findQueueFamilies(const vk::raii::SurfaceKHR &surface, const vk::QueueFlagBits flagBits) const {
+    const auto queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
+
+    for (uint32_t qfpIndex = 0; qfpIndex < queueFamilyProperties.size(); qfpIndex++){
+      if ((queueFamilyProperties[qfpIndex].queueFlags & flagBits) &&
+          physicalDevice.getSurfaceSupportKHR(qfpIndex, *surface)){
+        // found a queue family that supports both graphics and present
+        return qfpIndex;
+      }
+    }
+    throw std::runtime_error(std::format("Cannot find queue family index with {} flags!", to_string(flagBits)));
+
+  }
+
+
+  uint32_t GraphicDevice::findMemoryType(const uint32_t typeFilter, const vk::MemoryPropertyFlags properties) const {
+    const vk::PhysicalDeviceMemoryProperties memProperties = physicalDevice.getMemoryProperties();
+
+    for (uint32_t i = 0; i < memProperties.memoryTypeCount; ++i) {
+      if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+        return i;
+      }
+    }
+    throw std::runtime_error("failed to find suitable memory type!");
   }
 
 }
+

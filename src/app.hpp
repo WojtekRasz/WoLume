@@ -5,7 +5,7 @@
 #include "window.hpp"
 #include "config.hpp"
 #include "debug_messenger.hpp"
-#include "device.hpp"
+#include "graphic_device.hpp"
 
 #include <vulkan/vulkan_raii.hpp>
 
@@ -19,7 +19,7 @@
 #include "swapchain.hpp"
 
 
-namespace wo_lum {
+namespace wo_lume {
 
   class App {
   public:
