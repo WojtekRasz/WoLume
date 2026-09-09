@@ -8,7 +8,7 @@ namespace wo_lume {
 
   std::pair<vk::raii::PipelineLayout, vk::raii::Pipeline> createGraphicsPipeline(
     const vk::raii::Device &device,
-    const SwapChain &swapChainContext,
+    const SwapChain &swapChain,
     const vk::raii::DescriptorSetLayout & descriptorSetLayout
   );
 

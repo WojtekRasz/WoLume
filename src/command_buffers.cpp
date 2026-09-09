@@ -8,7 +8,7 @@ namespace wo_lume {
 
   vk::raii::CommandPool createCommandPool(const GraphicDevice &deviceContext) {
     vk::CommandPoolCreateInfo poolInfo{
-      .flags            = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+      .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
       .queueFamilyIndex = deviceContext.getGraphicsQueueFamilyIndex()
     };
 

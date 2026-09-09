@@ -41,8 +41,8 @@ namespace wo_lume{
 
   std::pair<vk::raii::PipelineLayout, vk::raii::Pipeline> createGraphicsPipeline(
     const vk::raii::Device &device,
-    const SwapChain &swapChainContext,
-    const vk::raii::DescriptorSetLayout & descriptorSetLayout
+    const SwapChain &swapChain,
+    const vk::raii::DescriptorSetLayout &descriptorSetLayout
   ) {
     auto shaderCode = readFile("../shaders/slang.spv");
     auto shaderModule = createShaderModule(shaderCode, device);
@@ -74,14 +74,14 @@ namespace wo_lume{
     vk::Viewport viewport{
       0.0f,
       0.0f,
-      static_cast<float>(swapChainContext.getExtent().width),
-      static_cast<float>(swapChainContext.getExtent().height),
+      static_cast<float>(swapChain.getExtent().width),
+      static_cast<float>(swapChain.getExtent().height),
       0.0f, 1.0f
     };
 
     vk::Rect2D scissor{
       vk::Offset2D{ .x = 0, .y = 0 },
-      swapChainContext.getExtent()
+      swapChain.getExtent()
     };
 
     vk::PipelineViewportStateCreateInfo viewportState{
@@ -96,7 +96,7 @@ namespace wo_lume{
       .rasterizerDiscardEnable = vk::False,
       .polygonMode             = vk::PolygonMode::eFill,
       .cullMode                = vk::CullModeFlagBits::eBack,
-      .frontFace               = vk::FrontFace::eCounterClockwise,
+      .frontFace               = vk::FrontFace::eClockwise,
       .depthBiasEnable         = vk::False,
       .lineWidth               = 1.0f
     };
@@ -151,7 +151,7 @@ namespace wo_lume{
        .renderPass          = nullptr
       },
       {
-        .colorAttachmentCount = 1, .pColorAttachmentFormats = &swapChainContext.getSurfaceFormat().format
+        .colorAttachmentCount = 1, .pColorAttachmentFormats = &swapChain.getSurfaceFormat().format
       }
     };
 

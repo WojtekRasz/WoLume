@@ -10,7 +10,7 @@
 namespace wo_lume {
 
   const std::vector<uint16_t> indices = {
-    0, 1, 2, 2, 3, 0
+    0, 1, 2, 0, 3, 1
   };
 
   Buffer createIndexBuffer(const GraphicDevice &deviceContext, const vk::raii::CommandPool &commandPool){

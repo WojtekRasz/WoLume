@@ -20,30 +20,26 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 namespace wo_lume {
 
   Renderer::Renderer(const Window &window):
-    instance(createInstance(context, Window::getRequiredExtensions())),
-    debugMessenger(config::enableValidationLayers ? createDebugMessenger(instance) : nullptr),
-    surface(instance, window),
-    graphicDevice(instance, surface),
-    swapChain(graphicDevice, surface, window)
+    rendererCore(window)
   {
-    descriptorSetLayout = createDescriptorSetLayout(graphicDevice);
-    auto pipelineContext = createGraphicsPipeline(graphicDevice.getLogicalDevice(), swapChain, descriptorSetLayout);
+    descriptorSetLayout = createDescriptorSetLayout(rendererCore.getGraphicDevice());
+    auto pipelineContext = createGraphicsPipeline(rendererCore.getGraphicDevice().getLogicalDevice(), rendererCore.getSwapChain(), descriptorSetLayout);
     pipelineLayout = std::move(pipelineContext.first);
     pipeline = std::move(pipelineContext.second);
-    commandPool = createCommandPool(graphicDevice);
-    vertexBuffer = createVertexBuffer(graphicDevice, commandPool);
-    indexBuffer = createIndexBuffer(graphicDevice, commandPool);
-    uniformBuffers = createUniformBuffers(graphicDevice);
-    descriptorPool = createDescriptorPool(graphicDevice);
-    descriptorSets = createDescriptorSets(graphicDevice, uniformBuffers, descriptorSetLayout, descriptorPool);
-    commandBuffers = createCommandBuffers(graphicDevice, commandPool);
+    commandPool = createCommandPool(rendererCore.getGraphicDevice());
+    vertexBuffer = createVertexBuffer(rendererCore.getGraphicDevice(), commandPool);
+    indexBuffer = createIndexBuffer(rendererCore.getGraphicDevice(), commandPool);
+    uniformBuffers = createUniformBuffers(rendererCore.getGraphicDevice());
+    descriptorPool = createDescriptorPool(rendererCore.getGraphicDevice());
+    descriptorSets = createDescriptorSets(rendererCore.getGraphicDevice(), uniformBuffers, descriptorSetLayout, descriptorPool);
+    commandBuffers = createCommandBuffers(rendererCore.getGraphicDevice(), commandPool);
     createSyncObjects();
   }
 
   Renderer::~Renderer() {
     // Wstrzymuje CPU do momentu, gdy GPU przetworzy wszystkie kolejki
-    if (graphicDevice.getLogicalDevice() != nullptr) {
-      graphicDevice.getLogicalDevice().waitIdle();
+    if (rendererCore.getGraphicDevice().getLogicalDevice() != nullptr) {
+      rendererCore.getGraphicDevice().getLogicalDevice().waitIdle();
     }
   }
 
@@ -65,7 +61,7 @@ namespace wo_lume {
 
     constexpr vk::ClearValue clearColor = vk::ClearColorValue(0.02f, 0.00f, 0.02f, 1.0f);
     vk::RenderingAttachmentInfo attachmentInfo = {
-      .imageView   = swapChain.getImageView(imageIndex),
+      .imageView   = rendererCore.getSwapChain().getImageView(imageIndex),
       .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
       .loadOp      = vk::AttachmentLoadOp::eClear,
       .storeOp     = vk::AttachmentStoreOp::eStore,
@@ -73,7 +69,7 @@ namespace wo_lume {
     };
 
     const vk::RenderingInfo renderingInfo = {
-      .renderArea           = {.offset = {0, 0}, .extent = swapChain.getExtent()},
+      .renderArea           = {.offset = {0, 0}, .extent = rendererCore.getSwapChain().getExtent()},
       .layerCount           = 1,
       .colorAttachmentCount = 1,
       .pColorAttachments    = &attachmentInfo
@@ -84,30 +80,29 @@ namespace wo_lume {
     commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *pipeline);
     commandBuffer.bindVertexBuffers(0, *vertexBuffer.buffer, {0});
     commandBuffer.bindIndexBuffer(*indexBuffer.buffer, 0, vk::IndexType::eUint16);
-
-
+    commandBuffer.bindDescriptorSets(
+      vk::PipelineBindPoint::eGraphics,
+      pipelineLayout,
+      0,
+      *descriptorSets[frameIndex],
+      nullptr
+    );
     commandBuffer.setViewport(
       0,
       vk::Viewport(
         0.0f,
-        static_cast<float>(swapChain.getExtent().height),
-        static_cast<float>(swapChain.getExtent().width),
-        -static_cast<float>(swapChain.getExtent().height),
+        0.0f,
+        static_cast<float>(rendererCore.getSwapChain().getExtent().width),
+        static_cast<float>(rendererCore.getSwapChain().getExtent().height),
         0.0f,
         1.0f
       )
     );
     commandBuffer.setScissor(
       0,
-      vk::Rect2D(vk::Offset2D(0, 0), swapChain.getExtent())
+      vk::Rect2D(vk::Offset2D(0, 0), rendererCore.getSwapChain().getExtent())
     );
 
-    commandBuffer.bindDescriptorSets(
-      vk::PipelineBindPoint::eGraphics,
-      pipelineLayout,
-      0,
-      *descriptorSets[frameIndex],
-      nullptr);
     commandBuffer.drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
     commandBuffer.endRendering();
 
@@ -125,14 +120,13 @@ namespace wo_lume {
   }
 
   void Renderer::drawFrame() {
-    auto fenceResult = graphicDevice.getLogicalDevice().waitForFences(*inFlightFences[frameIndex], vk::True, UINT64_MAX);
-    if (fenceResult != vk::Result::eSuccess)
-    {
+    auto fenceResult = rendererCore.getGraphicDevice().getLogicalDevice().waitForFences(*inFlightFences[frameIndex], vk::True, UINT64_MAX);
+    if (fenceResult != vk::Result::eSuccess){
       throw std::runtime_error("failed to wait for fence!");
     }
-    graphicDevice.getLogicalDevice().resetFences(*inFlightFences[frameIndex]);
+    rendererCore.getGraphicDevice().getLogicalDevice().resetFences(*inFlightFences[frameIndex]);
 
-    auto [result, imageIndex] = swapChain.getVkSwapChain().acquireNextImage(UINT64_MAX, *presentCompleteSemaphores[frameIndex], nullptr);
+    auto [result, imageIndex] = rendererCore.getSwapChain().getVkSwapChain().acquireNextImage(UINT64_MAX, *presentCompleteSemaphores[frameIndex], nullptr);
 
     updateUniformBuffer(frameIndex);
 
@@ -147,14 +141,14 @@ namespace wo_lume {
                                       .pCommandBuffers      = &*commandBuffers[frameIndex],
                                       .signalSemaphoreCount = 1,
                                       .pSignalSemaphores    = &*renderFinishedSemaphores[imageIndex]};
-    graphicDevice.getGraphicsQueue().submit(submitInfo, *inFlightFences[frameIndex]);
+    rendererCore.getGraphicDevice().getGraphicsQueue().submit(submitInfo, *inFlightFences[frameIndex]);
 
     const vk::PresentInfoKHR presentInfoKHR{.waitSemaphoreCount = 1,
                                             .pWaitSemaphores    = &*renderFinishedSemaphores[imageIndex],
                                             .swapchainCount     = 1,
-                                            .pSwapchains        = &*swapChain.getVkSwapChain(),
+                                            .pSwapchains        = &*rendererCore.getSwapChain().getVkSwapChain(),
                                             .pImageIndices      = &imageIndex};
-    result = graphicDevice.getGraphicsQueue().presentKHR(presentInfoKHR);
+    result = rendererCore.getGraphicDevice().getGraphicsQueue().presentKHR(presentInfoKHR);
     switch (result)
     {
       case vk::Result::eSuccess:
@@ -172,15 +166,13 @@ namespace wo_lume {
   void Renderer::createSyncObjects() {
     assert(presentCompleteSemaphores.empty() && renderFinishedSemaphores.empty() && inFlightFences.empty());
 
-    for (size_t i = 0; i < swapChain.getImagesCount(); i++)
-    {
-      renderFinishedSemaphores.emplace_back(graphicDevice.getLogicalDevice(), vk::SemaphoreCreateInfo());
+    for (size_t i = 0; i < rendererCore.getSwapChain().getImagesCount(); i++){
+      renderFinishedSemaphores.emplace_back(rendererCore.getGraphicDevice().getLogicalDevice(), vk::SemaphoreCreateInfo());
     }
 
-    for (size_t i = 0; i < config::MAX_FRAMES_IN_FLIGHT; i++)
-    {
-      presentCompleteSemaphores.emplace_back(graphicDevice.getLogicalDevice(), vk::SemaphoreCreateInfo());
-      inFlightFences.emplace_back(graphicDevice.getLogicalDevice(), vk::FenceCreateInfo{.flags = vk::FenceCreateFlagBits::eSignaled});
+    for (size_t i = 0; i < config::MAX_FRAMES_IN_FLIGHT; i++){
+      presentCompleteSemaphores.emplace_back(rendererCore.getGraphicDevice().getLogicalDevice(), vk::SemaphoreCreateInfo());
+      inFlightFences.emplace_back(rendererCore.getGraphicDevice().getLogicalDevice(), vk::FenceCreateInfo{.flags = vk::FenceCreateFlagBits::eSignaled});
     }
   }
 
@@ -203,7 +195,7 @@ namespace wo_lume {
       .newLayout           = new_layout,
       .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
       .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-      .image               = swapChain.getImage(imageIndex),
+      .image               = rendererCore.getSwapChain().getImage(imageIndex),
       .subresourceRange    = {
         .aspectMask     = vk::ImageAspectFlagBits::eColor,
         .baseMipLevel   = 0,
@@ -218,18 +210,18 @@ namespace wo_lume {
     commandBuffers[frameIndex].pipelineBarrier2(dependency_info);
   }
 
-  void Renderer::updateUniformBuffer(uint32_t currentImage){
+  void Renderer::updateUniformBuffer(const uint32_t currentImage){
     static auto startTime = std::chrono::high_resolution_clock::now();
 
     auto currentTime = std::chrono::high_resolution_clock::now();
     float time       = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
     UniformBufferObject ubo{};
-    ubo.model = rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.view = lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.model = rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    ubo.view = lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));
     ubo.proj = glm::perspective(
       glm::radians(45.0f),
-      static_cast<float>(swapChain.getExtent().width) / static_cast<float>(swapChain.getExtent().height),
+      static_cast<float>(rendererCore.getSwapChain().getExtent().width) / static_cast<float>(rendererCore.getSwapChain().getExtent().height),
       0.1f,
       10.0f
     );

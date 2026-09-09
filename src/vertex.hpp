@@ -9,7 +9,7 @@
 
 namespace wo_lume {
   struct Vertex {
-    glm::vec2 pos;
+    glm::vec3 pos;
     glm::vec3 color;
 
     static vk::VertexInputBindingDescription getBindingDescription()
@@ -21,7 +21,7 @@ namespace wo_lume {
     {
       return {
         {
-          {.location = 0, .binding = 0, .format = vk::Format::eR32G32Sfloat, .offset = offsetof(Vertex, pos)},
+          {.location = 0, .binding = 0, .format = vk::Format::eR32G32B32Sfloat, .offset = offsetof(Vertex, pos)},
           {.location = 1, .binding = 0, .format = vk::Format::eR32G32B32Sfloat, .offset = offsetof(Vertex, color)}
         }
       };
@@ -29,10 +29,10 @@ namespace wo_lume {
   };
 
   const std::vector<Vertex> vertices = {
-    {{-0.5f, -0.5f}, {0.0f, 0.5f, 0.0f}},
-    {{0.5f, -0.5f}, {0.0f, 0.0f, 0.5f}},
-    {{0.5f, 0.5f}, {0.5f, 0.0f, 1.0f}},
-    {{-0.5f, 0.5f}, {0.5f, 1.0f, 0.5f}}
+    {{-0.5f, 0.0f, -0.5f}, {0.0f, 0.5f, 0.0f}},
+    {{0.5f, 0.0f, 0.5f}, {0.5f, 0.0f, 1.0f}},
+    {{0.5f, 0.0f, -0.5f}, {0.0f, 0.0f, 0.5f}},
+    {{-0.5f, 0.0f, 0.5f}, {0.5f, 1.0f, 0.5f}}
   };
 
   Buffer createVertexBuffer(const GraphicDevice &deviceContext, const vk::raii::CommandPool &commandPool);

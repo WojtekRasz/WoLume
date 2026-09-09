@@ -82,6 +82,8 @@ add_executable(${PROJECT_NAME}
         src/descriptor.hpp
         src/descriptor.cpp
         src/window_surface.hpp
+        src/renderer_core.cpp
+        src/renderer_core.hpp
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE

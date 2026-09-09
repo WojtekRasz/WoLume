@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 
 #include "graphic_device.hpp"
+#include "renderer_core.hpp"
 #include "swapchain.hpp"
 
 namespace wo_lume {
@@ -31,12 +32,7 @@ namespace wo_lume {
     void createSyncObjects();
     void updateUniformBuffer(uint32_t currentImage);
 
-    vk::raii::Context context;
-    vk::raii::Instance instance;
-    WindowSurface surface;
-    vk::raii::DebugUtilsMessengerEXT debugMessenger = nullptr;
-    GraphicDevice graphicDevice;
-    SwapChain swapChain;
+    RendererCore rendererCore;
 
     vk::raii::DescriptorSetLayout descriptorSetLayout = nullptr;
     vk::raii::PipelineLayout pipelineLayout = nullptr;
