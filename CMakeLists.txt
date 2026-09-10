@@ -84,7 +84,17 @@ add_executable(${PROJECT_NAME}
         src/window_surface.hpp
         src/renderer_core.cpp
         src/renderer_core.hpp
+        src/image.cpp
+        src/image.hpp
+        stb_image/stb_image.h
+        src/sampler.cpp
+        src/sampler.hpp
 )
+
+target_include_directories(${PROJECT_NAME} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/stb_image
+)
+
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
         VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1

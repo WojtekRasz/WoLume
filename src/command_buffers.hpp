@@ -16,6 +16,16 @@ namespace wo_lume {
     vk::raii::Buffer &dstBuffer,
     vk::DeviceSize size
   );
+  void endSingleTimeCommands(const GraphicDevice &device, vk::raii::CommandBuffer &&commandBuffer);
+  vk::raii::CommandBuffer beginSingleTimeCommands(const GraphicDevice &device, const vk::raii::CommandPool &commandPool);
+
+  void transitionImageLayout(
+    vk::raii::CommandBuffer &commandBuffer,
+    const vk::raii::Image &image,
+    vk::ImageLayout oldLayout,
+    vk::ImageLayout newLayout
+  );
+  void copyBufferToImage(vk::raii::CommandBuffer &commandBuffer, const vk::raii::Buffer &buffer, vk::raii::Image &image, uint32_t width, uint32_t height);
 
 }
 

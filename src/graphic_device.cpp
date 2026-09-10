@@ -30,12 +30,12 @@ namespace wo_lume {
 
     bool validateFeatures(const vk::raii::PhysicalDevice &physicalDevice) {
       auto features                 = physicalDevice.template getFeatures2<vk::PhysicalDeviceFeatures2,
-                                                                       vk::PhysicalDeviceVulkan11Features,
-                                                                       vk::PhysicalDeviceVulkan13Features,
-                                                                       vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();
-      return features.template get<vk::PhysicalDeviceVulkan11Features>().shaderDrawParameters &&
-                                      features.template get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering &&
-                                      features.template get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().extendedDynamicState;
+                                                                         vk::PhysicalDeviceVulkan13Features,
+                                                                         vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();
+      return  features.template get<vk::PhysicalDeviceFeatures2>().features.samplerAnisotropy &&
+        features.template get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering &&
+        features.template get<vk::PhysicalDeviceVulkan13Features>().synchronization2 &&
+        features.template get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().extendedDynamicState;
     }
 
     bool isDeviceSuitable(const vk::raii::PhysicalDevice &physicalDevice) {
@@ -97,13 +97,13 @@ namespace wo_lume {
         vk::PhysicalDeviceVulkan13Features,
         vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>
       featureChain = {
-        {},                                    // vk::PhysicalDeviceFeatures2 (empty for now)
-        {.shaderDrawParameters = true},        // Enable shader draw parameters from Vulkan 1.1
+        {.features = {.samplerAnisotropy = true }},
+        {.shaderDrawParameters = true},
         {
           .synchronization2 = true,
           .dynamicRendering = true
-        },                                        // Enable dynamic rendering from Vulkan 1.3
-        {.extendedDynamicState = true}         // Enable extended dynamic state from the extension
+        },
+        {.extendedDynamicState = true}
       };
 
       vk::DeviceCreateInfo deviceCreateInfo{

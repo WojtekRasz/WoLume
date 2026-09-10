@@ -20,7 +20,8 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 namespace wo_lume {
 
   Renderer::Renderer(const Window &window):
-    rendererCore(window)
+    rendererCore(window),
+    sampler(rendererCore.getGraphicDevice())
   {
     descriptorSetLayout = createDescriptorSetLayout(rendererCore.getGraphicDevice());
     auto pipelineContext = createGraphicsPipeline(rendererCore.getGraphicDevice().getLogicalDevice(), rendererCore.getSwapChain(), descriptorSetLayout);
@@ -30,8 +31,9 @@ namespace wo_lume {
     vertexBuffer = createVertexBuffer(rendererCore.getGraphicDevice(), commandPool);
     indexBuffer = createIndexBuffer(rendererCore.getGraphicDevice(), commandPool);
     uniformBuffers = createUniformBuffers(rendererCore.getGraphicDevice());
+    images.emplace_back(rendererCore.getGraphicDevice(), commandPool, "../textures/texture.jpg");
     descriptorPool = createDescriptorPool(rendererCore.getGraphicDevice());
-    descriptorSets = createDescriptorSets(rendererCore.getGraphicDevice(), uniformBuffers, descriptorSetLayout, descriptorPool);
+    descriptorSets = createDescriptorSets(rendererCore.getGraphicDevice(), descriptorSetLayout, descriptorPool, uniformBuffers, images, sampler);
     commandBuffers = createCommandBuffers(rendererCore.getGraphicDevice(), commandPool);
     createSyncObjects();
   }
@@ -210,7 +212,7 @@ namespace wo_lume {
     commandBuffers[frameIndex].pipelineBarrier2(dependency_info);
   }
 
-  void Renderer::updateUniformBuffer(const uint32_t currentImage){
+  void Renderer::updateUniformBuffer(const uint32_t currentImage) const {
     static auto startTime = std::chrono::high_resolution_clock::now();
 
     auto currentTime = std::chrono::high_resolution_clock::now();

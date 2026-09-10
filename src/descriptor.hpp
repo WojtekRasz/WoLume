@@ -5,6 +5,8 @@
 
 #include "buffer.hpp"
 #include "graphic_device.hpp"
+#include "image.hpp"
+#include "sampler.hpp"
 
 namespace wo_lume {
 
@@ -12,11 +14,12 @@ namespace wo_lume {
   vk::raii::DescriptorPool createDescriptorPool(const GraphicDevice &deviceContext);
   std::vector<vk::raii::DescriptorSet> createDescriptorSets(
     const GraphicDevice &deviceContext,
-    const std::vector<Buffer> &uniformBuffers,
     const vk::raii::DescriptorSetLayout &descriptorSetLayout,
-    const vk::raii::DescriptorPool &descriptorPool
+    const vk::raii::DescriptorPool &descriptorPool,
+    const std::vector<Buffer> &ubos,
+    const std::vector<Image> &imageViews,
+    const Sampler &sampler
   );
-
 }
 
 #endif //DESCRIPTORS_HPP

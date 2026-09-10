@@ -6,7 +6,9 @@
 #include <glm/glm.hpp>
 
 #include "graphic_device.hpp"
+#include "image.hpp"
 #include "renderer_core.hpp"
+#include "sampler.hpp"
 #include "swapchain.hpp"
 
 namespace wo_lume {
@@ -30,7 +32,7 @@ namespace wo_lume {
       vk::PipelineStageFlags2 dst_stage_mask
     ) const;
     void createSyncObjects();
-    void updateUniformBuffer(uint32_t currentImage);
+    void updateUniformBuffer(uint32_t currentImage) const;
 
     RendererCore rendererCore;
 
@@ -41,6 +43,8 @@ namespace wo_lume {
     Buffer vertexBuffer;
     Buffer indexBuffer;
     std::vector<Buffer> uniformBuffers;
+    std::vector<Image> images;
+    Sampler sampler;
 
     vk::raii::DescriptorPool descriptorPool = nullptr;
     std::vector<vk::raii::DescriptorSet> descriptorSets;
