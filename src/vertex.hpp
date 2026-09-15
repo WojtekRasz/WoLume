@@ -5,6 +5,7 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "buffer.hpp"
+#include "command_buffers.hpp"
 #include "graphic_device.hpp"
 
 namespace wo_lume {
@@ -31,13 +32,13 @@ namespace wo_lume {
   };
 
   const std::vector<Vertex> vertices = {
-    {{-0.5f, 0.0f, -0.5f}, {0.0f, 0.5f, 0.0f}, {1.0f, 1.0f}},
-    {{0.5f, 0.0f, 0.5f}, {0.5f, 0.0f, 1.0f}, {0.0f, 0.0f}},
-    {{0.5f, 0.0f, -0.5f}, {0.0f, 0.0f, 0.5f}, {0.0f, 1.0f}},
-    {{-0.5f, 0.0f, 0.5f}, {0.5f, 1.0f, 0.5f}, {1.0f, 0.0f}}
+    {{0.3f, -0.5f, 0.3f}, {0.5f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+    {{0.3f, -0.5f, -0.3f}, {0.0f, 0.0f, 0.5f}, {1.0f, 0.0f}},
+    {{-0.3f, -0.5f, -0.3f}, {0.0f, 0.5f, 0.0f}, {00.f, 0.0f}},
+    {{-0.3f, -0.5f, 0.3f}, {0.5f, 1.0f, 0.5f}, {0.0f, 1.0f}},
   };
 
-  Buffer createVertexBuffer(const GraphicDevice &deviceContext, const vk::raii::CommandPool &commandPool);
+  Buffer createVertexBuffer(const GraphicDevice &deviceContext, const CommandBuffer &commandBuffer);
 }
 
 

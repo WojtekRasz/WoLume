@@ -5,99 +5,45 @@
 
 namespace wo_lume {
 
+  CommandBuffer::CommandBuffer(const GraphicDevice &device, const vk::raii::Queue &queue, vk::raii::CommandBuffer &&commandBuffer) :
+    device(device),
+    queue(queue),
+    commandBuffer(std::move(commandBuffer))
+  {}
 
-  vk::raii::CommandPool createCommandPool(const GraphicDevice &deviceContext) {
-    vk::CommandPoolCreateInfo poolInfo{
-      .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-      .queueFamilyIndex = deviceContext.getGraphicsQueueFamilyIndex()
-    };
+  void CommandBuffer::begin() const { commandBuffer.begin({}); }
+  void CommandBuffer::end() const { commandBuffer.end(); }
 
-    return vk::raii::CommandPool{deviceContext.getLogicalDevice(), poolInfo};
+  void CommandBuffer::submit() const {
+    queue.get().submit(
+      vk::SubmitInfo{.commandBufferCount = 1, .pCommandBuffers = &*commandBuffer},
+      nullptr
+    );
   }
 
-  std::vector<vk::raii::CommandBuffer> createCommandBuffers(const GraphicDevice &deviceContext, const vk::raii::CommandPool &commandPool) {
-    vk::CommandBufferAllocateInfo allocInfo{
-      .commandPool = commandPool,
-      .level = vk::CommandBufferLevel::ePrimary,
-      .commandBufferCount = config::MAX_FRAMES_IN_FLIGHT
-    };
-
-    return vk::raii::CommandBuffers{deviceContext.getLogicalDevice(), allocInfo};
+  void CommandBuffer::submitAndWait() const {
+    queue.get().submit(
+      vk::SubmitInfo{.commandBufferCount = 1, .pCommandBuffers = &*commandBuffer},
+      nullptr
+    );
+    device.get().getGraphicsQueue().waitIdle();
   }
 
-  void copyBuffer(
-    const GraphicDevice &device,
-    const vk::raii::CommandPool &commandPool,
-    vk::raii::Buffer &srcBuffer,
-    vk::raii::Buffer &dstBuffer,
-    const vk::DeviceSize size
-  ){
-    vk::raii::CommandBuffer commandCopyBuffer = beginSingleTimeCommands(device, commandPool);
-    commandCopyBuffer.copyBuffer(*srcBuffer, *dstBuffer, vk::BufferCopy{.size = size});
-    endSingleTimeCommands(device, std::move(commandCopyBuffer));
+  void CommandBuffer::copyBufferToBuffer(
+      const Buffer &srcBuffer,
+      const Buffer &dstBuffer,
+      const vk::DeviceSize size
+  ) const {
+    commandBuffer.copyBuffer(*srcBuffer.buffer, *dstBuffer.buffer, vk::BufferCopy{.size = size});
   }
 
-  vk::raii::CommandBuffer beginSingleTimeCommands(const GraphicDevice &device, const vk::raii::CommandPool &commandPool){
-    vk::CommandBufferAllocateInfo allocInfo{.commandPool = commandPool, .level = vk::CommandBufferLevel::ePrimary, .commandBufferCount = 1};
-    vk::raii::CommandBuffer       commandBuffer = std::move(vk::raii::CommandBuffers(device.getLogicalDevice(), allocInfo).front());
-
-    vk::CommandBufferBeginInfo beginInfo{.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit};
-    commandBuffer.begin(beginInfo);
-
-    return std::move(commandBuffer);
-  }
-
-  void endSingleTimeCommands(const GraphicDevice &device, vk::raii::CommandBuffer &&commandBuffer){
-    commandBuffer.end();
-
-    vk::SubmitInfo submitInfo{.commandBufferCount = 1, .pCommandBuffers = &*commandBuffer};
-    device.getGraphicsQueue().submit(submitInfo, nullptr);
-    device.getLogicalDevice().waitIdle();
-  }
-
-  void transitionImageLayout(
-    vk::raii::CommandBuffer &commandBuffer,
+  void CommandBuffer::copyBufferToImage(
+    const Buffer &buffer,
     const vk::raii::Image &image,
-    vk::ImageLayout oldLayout,
-    vk::ImageLayout newLayout
-  ){
-    vk::ImageMemoryBarrier barrier{
-      .oldLayout           = oldLayout,
-      .newLayout           = newLayout,
-      .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
-      .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
-      .image               = image,
-      .subresourceRange    = {.aspectMask = vk::ImageAspectFlagBits::eColor, .levelCount = 1, .layerCount = 1}
-    };
-
-    vk::PipelineStageFlags sourceStage;
-    vk::PipelineStageFlags destinationStage;
-
-    if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eTransferDstOptimal)
-    {
-      barrier.srcAccessMask = {};
-      barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-
-      sourceStage      = vk::PipelineStageFlagBits::eTopOfPipe;
-      destinationStage = vk::PipelineStageFlagBits::eTransfer;
-    }
-    else if (oldLayout == vk::ImageLayout::eTransferDstOptimal && newLayout == vk::ImageLayout::eShaderReadOnlyOptimal)
-    {
-      barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-      barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-
-      sourceStage      = vk::PipelineStageFlagBits::eTransfer;
-      destinationStage = vk::PipelineStageFlagBits::eFragmentShader;
-    }
-    else
-    {
-      throw std::invalid_argument("unsupported layout transition!");
-    }
-    commandBuffer.pipelineBarrier(sourceStage, destinationStage, {}, {}, {}, barrier);
-  }
-
-  void copyBufferToImage(vk::raii::CommandBuffer &commandBuffer, const vk::raii::Buffer &buffer, vk::raii::Image &image, uint32_t width, uint32_t height){
-    vk::BufferImageCopy region{
+    const uint32_t width,
+    const uint32_t height
+  ) const {
+    const vk::BufferImageCopy region{
       .bufferOffset = 0,
       .bufferRowLength = 0,
       .bufferImageHeight = 0,
@@ -112,13 +58,84 @@ namespace wo_lume {
     };
 
     commandBuffer.copyBufferToImage(
-        *buffer,
+        *buffer.buffer,
         *image,
         vk::ImageLayout::eTransferDstOptimal,
         region
     );
   }
 
+  void CommandBuffer::transitionImageLayout(
+    const vk::raii::Image &image,
+    const vk::ImageLayout oldLayout,
+    const vk::ImageLayout newLayout
+  ) const {
+    vk::ImageMemoryBarrier barrier{
+      .oldLayout           = oldLayout,
+      .newLayout           = newLayout,
+      .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+      .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
+      .image               = image,
+      .subresourceRange    = {.aspectMask = vk::ImageAspectFlagBits::eColor, .levelCount = 1, .layerCount = 1}
+    };
+
+    vk::PipelineStageFlags sourceStage;
+    vk::PipelineStageFlags destinationStage;
+
+    if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eTransferDstOptimal){
+      barrier.srcAccessMask = {};
+      barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+
+      sourceStage      = vk::PipelineStageFlagBits::eTopOfPipe;
+      destinationStage = vk::PipelineStageFlagBits::eTransfer;
+    }
+    else if (oldLayout == vk::ImageLayout::eTransferDstOptimal && newLayout == vk::ImageLayout::eShaderReadOnlyOptimal){
+      barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+      barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+
+      sourceStage      = vk::PipelineStageFlagBits::eTransfer;
+      destinationStage = vk::PipelineStageFlagBits::eFragmentShader;
+    }
+    else{
+      throw std::invalid_argument("unsupported layout transition!");
+    }
+    commandBuffer.pipelineBarrier(sourceStage, destinationStage, {}, {}, {}, barrier);
+  }
+
+  CommandPool::CommandPool(const GraphicDevice &device) : device(device) {
+    vk::CommandPoolCreateInfo poolInfo{
+      .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+      .queueFamilyIndex = device.getGraphicsQueueFamilyIndex()
+    };
+
+    commandPool = vk::raii::CommandPool{device.getLogicalDevice(), poolInfo};
+  }
+
+  CommandBuffer CommandPool::createCommandBuffer(const vk::raii::Queue &queue, const vk::CommandBufferLevel level) const {
+    const vk::CommandBufferAllocateInfo allocInfo{
+      .commandPool = commandPool,
+      .level = level,
+      .commandBufferCount = 1
+    };
+
+    return CommandBuffer{device, queue, std::move(vk::raii::CommandBuffers{device.get().getLogicalDevice(), allocInfo}.front())};
+  }
+
+  std::vector<CommandBuffer> CommandPool::createCommandBuffers(const vk::raii::Queue &queue, const vk::CommandBufferLevel level, const uint32_t count) const {
+    const vk::CommandBufferAllocateInfo allocInfo{
+      .commandPool = commandPool,
+      .level = level,
+      .commandBufferCount = count
+    };
+    auto vkCommandBuffers = vk::raii::CommandBuffers{device.get().getLogicalDevice(), allocInfo};
+    std::vector<CommandBuffer> commandBuffers;
+
+    for (int i = 0; i < count; ++i) {
+      commandBuffers.emplace_back(device, queue, std::move(vkCommandBuffers[i]));
+    }
+
+    return commandBuffers;
+  }
 
 
 }

@@ -13,11 +13,11 @@
 namespace wo_lume {
   Image::Image(
     const GraphicDevice &device,
-    const vk::raii::CommandPool &commandPool,
-    const std::string &textureFile
+    const CommandBuffer &commandBuffer,
+    const std::string &textureFilename
   ){
     int texWidth, texHeight, texChannels;
-    stbi_uc *pixels = stbi_load(textureFile.data(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    stbi_uc *pixels = stbi_load(textureFilename.data(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     vk::DeviceSize imageSize = texWidth * texHeight * 4;
 
     if (!pixels){
@@ -59,11 +59,12 @@ namespace wo_lume {
     imageMemory = vk::raii::DeviceMemory(device.getLogicalDevice(), allocInfo);
     image.bindMemory(imageMemory, 0);
 
-    vk::raii::CommandBuffer commandBuffer = beginSingleTimeCommands(device, commandPool);
-    transitionImageLayout(commandBuffer, image, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
-    copyBufferToImage(commandBuffer, stagingBuffer.buffer, image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
-    transitionImageLayout(commandBuffer, image, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
-    endSingleTimeCommands(device, std::move(commandBuffer));
+    commandBuffer.begin();
+    commandBuffer.transitionImageLayout(image, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
+    commandBuffer.copyBufferToImage(stagingBuffer, image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+    commandBuffer.transitionImageLayout(image, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
+    commandBuffer.end();
+    commandBuffer.submitAndWait();
 
     vk::ImageViewCreateInfo viewInfo{
       .image = image,

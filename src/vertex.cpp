@@ -5,7 +5,7 @@
 namespace wo_lume {
 
 
-  Buffer createVertexBuffer(const GraphicDevice &deviceContext, const vk::raii::CommandPool &commandPool) {
+  Buffer createVertexBuffer(const GraphicDevice &deviceContext, const CommandBuffer &commandBuffer) {
     const vk::DeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
     Buffer stagingBuffer = createBufferContext(
@@ -26,13 +26,10 @@ namespace wo_lume {
       vk::MemoryPropertyFlagBits::eDeviceLocal
     );
 
-    copyBuffer(
-      deviceContext,
-      commandPool,
-      stagingBuffer.buffer,
-      vertexBuffer.buffer,
-      bufferSize
-    );
+    commandBuffer.begin();
+    commandBuffer.copyBufferToBuffer(stagingBuffer, vertexBuffer, bufferSize);
+    commandBuffer.end();
+    commandBuffer.submitAndWait();
 
     return vertexBuffer;
   }

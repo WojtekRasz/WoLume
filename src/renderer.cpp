@@ -21,20 +21,22 @@ namespace wo_lume {
 
   Renderer::Renderer(const Window &window):
     rendererCore(window),
-    sampler(rendererCore.getGraphicDevice())
-  {
+    sampler(rendererCore.getGraphicDevice()),
+    utilFence(rendererCore.getGraphicDevice().getLogicalDevice(), vk::FenceCreateInfo{.flags = vk::FenceCreateFlagBits::eSignaled}),
+    commandPool(rendererCore.getGraphicDevice()),
+    utilCommandBuffer(commandPool.createCommandBuffer(rendererCore.getGraphicDevice().getGraphicsQueue() ,vk::CommandBufferLevel::ePrimary)),
+    renderCommandBuffers(commandPool.createCommandBuffers(rendererCore.getGraphicDevice().getGraphicsQueue(), vk::CommandBufferLevel::ePrimary, config::MAX_FRAMES_IN_FLIGHT)
+  ){
     descriptorSetLayout = createDescriptorSetLayout(rendererCore.getGraphicDevice());
     auto pipelineContext = createGraphicsPipeline(rendererCore.getGraphicDevice().getLogicalDevice(), rendererCore.getSwapChain(), descriptorSetLayout);
     pipelineLayout = std::move(pipelineContext.first);
     pipeline = std::move(pipelineContext.second);
-    commandPool = createCommandPool(rendererCore.getGraphicDevice());
-    vertexBuffer = createVertexBuffer(rendererCore.getGraphicDevice(), commandPool);
-    indexBuffer = createIndexBuffer(rendererCore.getGraphicDevice(), commandPool);
+    vertexBuffer = createVertexBuffer(rendererCore.getGraphicDevice(), utilCommandBuffer);
+    indexBuffer = createIndexBuffer(rendererCore.getGraphicDevice(), utilCommandBuffer);
     uniformBuffers = createUniformBuffers(rendererCore.getGraphicDevice());
-    images.emplace_back(rendererCore.getGraphicDevice(), commandPool, "../textures/texture.jpg");
+    images.emplace_back(rendererCore.getGraphicDevice(), utilCommandBuffer, "../textures/texture.jpg" );
     descriptorPool = createDescriptorPool(rendererCore.getGraphicDevice());
     descriptorSets = createDescriptorSets(rendererCore.getGraphicDevice(), descriptorSetLayout, descriptorPool, uniformBuffers, images, sampler);
-    commandBuffers = createCommandBuffers(rendererCore.getGraphicDevice(), commandPool);
     createSyncObjects();
   }
 
@@ -47,9 +49,9 @@ namespace wo_lume {
 
 
   void Renderer::recordCommandBuffer(const uint32_t imageIndex) const {
-    auto &commandBuffer = commandBuffers[frameIndex];
+    auto &commandBuffer = renderCommandBuffers[frameIndex];
 
-    commandBuffer.begin({});
+    commandBuffer.begin();
 
     TransitionImageLayout(
       imageIndex,
@@ -77,19 +79,19 @@ namespace wo_lume {
       .pColorAttachments    = &attachmentInfo
     };
 
-    commandBuffer.beginRendering(renderingInfo);
+    commandBuffer.getVkCommandBuffer().beginRendering(renderingInfo);
 
-    commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *pipeline);
-    commandBuffer.bindVertexBuffers(0, *vertexBuffer.buffer, {0});
-    commandBuffer.bindIndexBuffer(*indexBuffer.buffer, 0, vk::IndexType::eUint16);
-    commandBuffer.bindDescriptorSets(
+    commandBuffer.getVkCommandBuffer().bindPipeline(vk::PipelineBindPoint::eGraphics, *pipeline);
+    commandBuffer.getVkCommandBuffer().bindVertexBuffers(0, *vertexBuffer.buffer, {0});
+    commandBuffer.getVkCommandBuffer().bindIndexBuffer(*indexBuffer.buffer, 0, vk::IndexType::eUint16);
+    commandBuffer.getVkCommandBuffer().bindDescriptorSets(
       vk::PipelineBindPoint::eGraphics,
       pipelineLayout,
       0,
       *descriptorSets[frameIndex],
       nullptr
     );
-    commandBuffer.setViewport(
+    commandBuffer.getVkCommandBuffer().setViewport(
       0,
       vk::Viewport(
         0.0f,
@@ -100,13 +102,13 @@ namespace wo_lume {
         1.0f
       )
     );
-    commandBuffer.setScissor(
+    commandBuffer.getVkCommandBuffer().setScissor(
       0,
       vk::Rect2D(vk::Offset2D(0, 0), rendererCore.getSwapChain().getExtent())
     );
 
-    commandBuffer.drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
-    commandBuffer.endRendering();
+    commandBuffer.getVkCommandBuffer().drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+    commandBuffer.getVkCommandBuffer().endRendering();
 
     TransitionImageLayout(
       imageIndex,
@@ -132,7 +134,7 @@ namespace wo_lume {
 
     updateUniformBuffer(frameIndex);
 
-    commandBuffers[frameIndex].reset();
+    renderCommandBuffers[frameIndex].getVkCommandBuffer().reset();
     recordCommandBuffer(imageIndex);
 
     vk::PipelineStageFlags waitDestinationStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
@@ -140,9 +142,10 @@ namespace wo_lume {
                                       .pWaitSemaphores      = &*presentCompleteSemaphores[frameIndex],
                                       .pWaitDstStageMask    = &waitDestinationStageMask,
                                       .commandBufferCount   = 1,
-                                      .pCommandBuffers      = &*commandBuffers[frameIndex],
+                                      .pCommandBuffers      = &*renderCommandBuffers[frameIndex].getVkCommandBuffer(),
                                       .signalSemaphoreCount = 1,
                                       .pSignalSemaphores    = &*renderFinishedSemaphores[imageIndex]};
+
     rendererCore.getGraphicDevice().getGraphicsQueue().submit(submitInfo, *inFlightFences[frameIndex]);
 
     const vk::PresentInfoKHR presentInfoKHR{.waitSemaphoreCount = 1,
@@ -150,6 +153,7 @@ namespace wo_lume {
                                             .swapchainCount     = 1,
                                             .pSwapchains        = &*rendererCore.getSwapChain().getVkSwapChain(),
                                             .pImageIndices      = &imageIndex};
+
     result = rendererCore.getGraphicDevice().getGraphicsQueue().presentKHR(presentInfoKHR);
     switch (result)
     {
@@ -209,17 +213,17 @@ namespace wo_lume {
       .imageMemoryBarrierCount = 1,
       .pImageMemoryBarriers    = &barrier
     };
-    commandBuffers[frameIndex].pipelineBarrier2(dependency_info);
+    renderCommandBuffers[frameIndex].getVkCommandBuffer().pipelineBarrier2(dependency_info);
   }
 
   void Renderer::updateUniformBuffer(const uint32_t currentImage) const {
     static auto startTime = std::chrono::high_resolution_clock::now();
 
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    float time       = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+    const auto currentTime = std::chrono::high_resolution_clock::now();
+    const float time       = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
     UniformBufferObject ubo{};
-    ubo.model = rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    ubo.model = rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, -1.0f, 0.0f));
     ubo.view = lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));
     ubo.proj = glm::perspective(
       glm::radians(45.0f),
@@ -230,6 +234,5 @@ namespace wo_lume {
 
     memcpy(uniformBuffers[currentImage].mapped, &ubo, sizeof(ubo));
   }
-
 
 } // wo_lum

@@ -5,7 +5,7 @@
 #include <vulkan/vulkan_raii.hpp>
 #include <glm/glm.hpp>
 
-#include "graphic_device.hpp"
+#include "command_buffers.hpp"
 #include "image.hpp"
 #include "renderer_core.hpp"
 #include "sampler.hpp"
@@ -36,6 +36,12 @@ namespace wo_lume {
 
     RendererCore rendererCore;
 
+    vk::raii::Fence utilFence;
+
+    CommandPool commandPool;
+    CommandBuffer utilCommandBuffer;
+    std::vector<CommandBuffer> renderCommandBuffers;
+
     vk::raii::DescriptorSetLayout descriptorSetLayout = nullptr;
     vk::raii::PipelineLayout pipelineLayout = nullptr;
     vk::raii::Pipeline pipeline = nullptr;
@@ -48,9 +54,6 @@ namespace wo_lume {
 
     vk::raii::DescriptorPool descriptorPool = nullptr;
     std::vector<vk::raii::DescriptorSet> descriptorSets;
-
-    vk::raii::CommandPool commandPool = nullptr;
-    std::vector<vk::raii::CommandBuffer> commandBuffers;
 
     std::vector<vk::raii::Semaphore> presentCompleteSemaphores;
     std::vector<vk::raii::Semaphore> renderFinishedSemaphores;

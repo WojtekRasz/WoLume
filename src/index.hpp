@@ -10,10 +10,11 @@
 namespace wo_lume {
 
   const std::vector<uint16_t> indices = {
-    0, 1, 2, 0, 3, 1
+    0, 1, 3,
+    1, 2, 3,
   };
 
-  Buffer createIndexBuffer(const GraphicDevice &deviceContext, const vk::raii::CommandPool &commandPool){
+  Buffer createIndexBuffer(const GraphicDevice &deviceContext, const CommandBuffer &commandBuffer){
     vk::DeviceSize bufferSize = sizeof(indices[0]) * indices.size();
 
     Buffer stagingBuffer = createBufferContext(
@@ -34,13 +35,14 @@ namespace wo_lume {
       vk::MemoryPropertyFlagBits::eDeviceLocal
     );
 
-    copyBuffer(
-      deviceContext,
-      commandPool,
-      stagingBuffer.buffer,
-      indexBuffer.buffer,
+    commandBuffer.begin();
+    commandBuffer.copyBufferToBuffer(
+      stagingBuffer,
+      indexBuffer,
       bufferSize
     );
+    commandBuffer.end();
+    commandBuffer.submitAndWait();
 
     return indexBuffer;
   }
