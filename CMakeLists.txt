@@ -47,6 +47,11 @@ add_executable(renderer
         src/main.cpp
 )
 
+target_compile_definitions(renderer PRIVATE
+    VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1
+    VULKAN_HPP_NO_STRUCT_CONSTRUCTORS=1
+)
+
 add_dependencies(renderer shaders)
 
 target_compile_features(renderer PRIVATE cxx_std_23)

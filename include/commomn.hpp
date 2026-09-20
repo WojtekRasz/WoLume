@@ -2,7 +2,7 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
 
 #include <glm/glm.hpp>
 
@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <vector>
 #include <array>
+#include <map>
 #include <string>
 #include <optional>
 #include <cstdint>
