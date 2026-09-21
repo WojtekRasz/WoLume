@@ -1,53 +1,7 @@
 #include "renderer_core.hpp"
 
+
 namespace {
-  vk::raii::Instance init_instance( const vk::raii::Context &context ){
-
-    vk::ApplicationInfo app_info{
-      "Wolume App",
-      VK_MAKE_VERSION(1, 0, 0),
-      "WoLume Engine",
-      VK_MAKE_VERSION(1, 0, 0),
-      VK_API_VERSION_1_3
-    };
-
-    //Layers validation
-    auto availableLayersProperties = context.enumerateInstanceLayerProperties();
-    std::vector<const char*> required_layers = {
-      "VK_LAYER_KHRONOS_validation"
-    };
-    if (! std::ranges::all_of(required_layers, [&](std::string_view required) {
-      return std::ranges::any_of(availableLayersProperties, [required](const auto& available) {
-        return required == available.layerName;
-      });
-    })) throw std::runtime_error("Required Vulkan layers are not supported!");
-
-    //Extension validation
-    auto availableExtensionsProperties = context.enumerateInstanceExtensionProperties();
-
-    uint32_t count;
-    const char* const* sdlExtensions = SDL_Vulkan_GetInstanceExtensions(&count);
-    std::vector<const char*> required_extensions{sdlExtensions, sdlExtensions + count};
-
-    if ( std::ranges::all_of(required_extensions, [&](std::string_view required) {
-      return std::ranges::any_of(availableExtensionsProperties, [required](const auto& available) {
-        return required == available.extensionName;
-      });
-    })) throw std::runtime_error("Required Vulkan extensions are not supported!");
-
-    //Instance creation
-    vk::InstanceCreateInfo create_info{
-      {},
-      &app_info,
-      static_cast<uint32_t>(required_layers.size()),
-      required_layers.data(),
-      static_cast<uint32_t>(required_extensions.size()),
-      required_extensions.data(),
-    };
-
-    return vk::raii::Instance{context, create_info};
-  }
-
   /**
    * @param physical_device - physical device
    *
@@ -150,7 +104,7 @@ namespace {
     throw std::runtime_error("Couldn't find a queue family supporting graphics and presentation!");
   }
 
-  vk::raii::Device init_device(const vk::raii::PhysicalDevice &physical_device, uint32_t queue_family_index) {
+  vk::raii::Device create_device(const vk::raii::PhysicalDevice &physical_device, uint32_t queue_family_index) {
     float queuePriority = 0.5f;
 
     auto queueFamilyIt = std::ranges::find_if(physical_device.getQueueFamilyProperties(), [](const auto& queue_family) {
@@ -190,18 +144,58 @@ namespace {
 
     return vk::raii::Device{physical_device, device_create_info};
   }
-
 }
 
+void RendererCore::init_instance(){
 
-RendererCore init_renderer_core(const vk::raii::SurfaceKHR& surface) {
-  RendererCore core;
+    vk::ApplicationInfo app_info{
+      .pApplicationName = "Wolume App",
+      .applicationVersion = VK_MAKE_VERSION(1, 0, 0),
+      .pEngineName = "WoLume Engine",
+      .engineVersion = VK_MAKE_VERSION(1, 0, 0),
+      .apiVersion = VK_API_VERSION_1_3
+    };
 
-  core.instance = init_instance(core.context);
-  core.physical_device = pick_physical_device(core.instance);
-  core.queue_family_index = find_queue_family(core.physical_device, surface);
-  core.device = init_device(core.physical_device, core.queue_family_index);
-  core.queue = vk::raii::Queue(core.device, core.queue_family_index, 0);
+    //Layers validation
+    auto availableLayersProperties = context.enumerateInstanceLayerProperties();
+    std::vector<const char*> required_layers = {
+      "VK_LAYER_KHRONOS_validation"
+    };
+    if (! std::ranges::all_of(required_layers, [&](std::string_view required) {
+      return std::ranges::any_of(availableLayersProperties, [required](const auto& available) {
+        return required == available.layerName;
+      });
+    })) throw std::runtime_error("Required Vulkan layers are not supported!");
 
-  return std::move(core);
+    //Extension validation
+    auto availableExtensionsProperties = context.enumerateInstanceExtensionProperties();
+
+    uint32_t count;
+    const char* const* sdlExtensions = SDL_Vulkan_GetInstanceExtensions(&count);
+    std::vector<const char*> required_extensions{sdlExtensions, sdlExtensions + count};
+
+    if ( std::ranges::all_of(required_extensions, [&](std::string_view required) {
+      return std::ranges::any_of(availableExtensionsProperties, [required](const auto& available) {
+        return required == available.extensionName;
+      });
+    })) throw std::runtime_error("Required Vulkan extensions are not supported!");
+
+    //Instance creation
+    const vk::InstanceCreateInfo create_info{
+      .pApplicationInfo = &app_info,
+      .enabledLayerCount = static_cast<uint32_t>(required_layers.size()),
+      .ppEnabledLayerNames = required_layers.data(),
+      .enabledExtensionCount = static_cast<uint32_t>(required_extensions.size()),
+      .ppEnabledExtensionNames = required_extensions.data(),
+    };
+
+    instance = vk::raii::Instance{context, create_info};
+  }
+
+void RendererCore::init_device_context(const vk::raii::SurfaceKHR& surface) {
+  physical_device = pick_physical_device(instance);
+  queue_family_index = find_queue_family(physical_device, surface);
+  device = create_device(physical_device, queue_family_index);
+  queue = vk::raii::Queue(device, queue_family_index, 0);
 }
+

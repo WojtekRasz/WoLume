@@ -2,6 +2,7 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 
 #include <glm/glm.hpp>

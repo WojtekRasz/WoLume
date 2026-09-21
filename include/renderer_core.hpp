@@ -9,6 +9,7 @@ struct RendererCore {
   vk::raii::Device device = nullptr;
   uint32_t queue_family_index = -1;
   vk::raii::Queue queue = nullptr;
-};
 
-RendererCore init_renderer_core(const vk::raii::SurfaceKHR& surface);
+  void init_instance();
+  void init_device_context(const vk::raii::SurfaceKHR& surface);
+};
