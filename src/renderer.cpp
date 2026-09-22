@@ -1,5 +1,10 @@
 #include "renderer.hpp"
 
+Renderer::Renderer() {
+  RenderingSystemBuilder builder{core};
+  system = builder.build();
+}
+
 void Renderer::run() {
   bool running = true;
 

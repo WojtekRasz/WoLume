@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.20)
 project(WoLume)
 
 set(SHADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/shaders)
-set(SHADER_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/shaders/bin)
+set(SHADER_OUTPUT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/shaders/bin)
 
 find_package(Vulkan REQUIRED)
 find_package(SDL3 REQUIRED CONFIG)
@@ -31,6 +31,8 @@ foreach(SHADER ${SHADER_SOURCES})
         COMMAND ${SLANGC}
         ${SHADER}
         -target spirv
+        -entry vertMain
+        -entry fragMain
         -o ${SHADER_OUTPUT}
 
         DEPENDS ${SHADER}
@@ -47,6 +49,7 @@ add_executable(renderer
     src/main.cpp
     src/renderer.cpp
     src/renderer_core.cpp
+    src/rendering_system.cpp
 )
 
 target_compile_definitions(renderer PRIVATE
