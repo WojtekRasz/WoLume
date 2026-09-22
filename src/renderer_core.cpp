@@ -146,56 +146,175 @@ namespace {
   }
 }
 
+
+
 void RendererCore::init_instance(){
+  vk::ApplicationInfo app_info{
+    .pApplicationName = "Wolume App",
+    .applicationVersion = VK_MAKE_VERSION(1, 0, 0),
+    .pEngineName = "WoLume Engine",
+    .engineVersion = VK_MAKE_VERSION(1, 0, 0),
+    .apiVersion = VK_API_VERSION_1_3
+  };
 
-    vk::ApplicationInfo app_info{
-      .pApplicationName = "Wolume App",
-      .applicationVersion = VK_MAKE_VERSION(1, 0, 0),
-      .pEngineName = "WoLume Engine",
-      .engineVersion = VK_MAKE_VERSION(1, 0, 0),
-      .apiVersion = VK_API_VERSION_1_3
-    };
+  //Layers validation
+  auto availableLayersProperties = context.enumerateInstanceLayerProperties();
+  std::vector<const char*> required_layers = {
+    "VK_LAYER_KHRONOS_validation"
+  };
+  if (! std::ranges::all_of(required_layers, [&](std::string_view required) {
+    return std::ranges::any_of(availableLayersProperties, [required](const auto& available) {
+      return required == available.layerName;
+    });
+  })) throw std::runtime_error("Required Vulkan layers are not supported!");
 
-    //Layers validation
-    auto availableLayersProperties = context.enumerateInstanceLayerProperties();
-    std::vector<const char*> required_layers = {
-      "VK_LAYER_KHRONOS_validation"
-    };
-    if (! std::ranges::all_of(required_layers, [&](std::string_view required) {
-      return std::ranges::any_of(availableLayersProperties, [required](const auto& available) {
-        return required == available.layerName;
-      });
-    })) throw std::runtime_error("Required Vulkan layers are not supported!");
+  //Extension validation
+  auto availableExtensionsProperties = context.enumerateInstanceExtensionProperties();
 
-    //Extension validation
-    auto availableExtensionsProperties = context.enumerateInstanceExtensionProperties();
+  uint32_t count;
+  const char* const* sdlExtensions = SDL_Vulkan_GetInstanceExtensions(&count);
+  std::vector<const char*> required_extensions{sdlExtensions, sdlExtensions + count};
 
-    uint32_t count;
-    const char* const* sdlExtensions = SDL_Vulkan_GetInstanceExtensions(&count);
-    std::vector<const char*> required_extensions{sdlExtensions, sdlExtensions + count};
+  if ( std::ranges::all_of(required_extensions, [&](std::string_view required) {
+    return std::ranges::any_of(availableExtensionsProperties, [required](const auto& available) {
+      return required == available.extensionName;
+    });
+  })) throw std::runtime_error("Required Vulkan extensions are not supported!");
 
-    if ( std::ranges::all_of(required_extensions, [&](std::string_view required) {
-      return std::ranges::any_of(availableExtensionsProperties, [required](const auto& available) {
-        return required == available.extensionName;
-      });
-    })) throw std::runtime_error("Required Vulkan extensions are not supported!");
+  //Instance creation
+  const vk::InstanceCreateInfo create_info{
+    .pApplicationInfo = &app_info,
+    .enabledLayerCount = static_cast<uint32_t>(required_layers.size()),
+    .ppEnabledLayerNames = required_layers.data(),
+    .enabledExtensionCount = static_cast<uint32_t>(required_extensions.size()),
+    .ppEnabledExtensionNames = required_extensions.data(),
+  };
 
-    //Instance creation
-    const vk::InstanceCreateInfo create_info{
-      .pApplicationInfo = &app_info,
-      .enabledLayerCount = static_cast<uint32_t>(required_layers.size()),
-      .ppEnabledLayerNames = required_layers.data(),
-      .enabledExtensionCount = static_cast<uint32_t>(required_extensions.size()),
-      .ppEnabledExtensionNames = required_extensions.data(),
-    };
+  instance = vk::raii::Instance{context, create_info};
+}
 
-    instance = vk::raii::Instance{context, create_info};
+void RendererCore::init_window() {
+  if (!SDL_Init(SDL_INIT_VIDEO)) {
+    throw std::runtime_error(SDL_GetError());
   }
 
-void RendererCore::init_device_context(const vk::raii::SurfaceKHR& surface) {
+  window = SDL_CreateWindow(
+    "WoLume",
+    1280,
+    720,
+    SDL_WINDOW_VULKAN
+  );
+
+  if (window == nullptr) {
+    throw std::runtime_error(SDL_GetError());
+  }
+}
+
+void RendererCore::init_surface() {
+  VkSurfaceKHR raw_surface{};
+
+  if (!SDL_Vulkan_CreateSurface(window, *instance, nullptr, &raw_surface)) {
+    throw std::runtime_error(SDL_GetError());
+  }
+
+  surface = vk::raii::SurfaceKHR{instance, raw_surface};
+}
+
+void RendererCore::init_device_context() {
   physical_device = pick_physical_device(instance);
   queue_family_index = find_queue_family(physical_device, surface);
   device = create_device(physical_device, queue_family_index);
   queue = vk::raii::Queue(device, queue_family_index, 0);
 }
+
+void RendererCore::destroy_window() {
+  if (window != nullptr) {
+    SDL_DestroyWindow(window);
+    window = nullptr;
+  }
+
+  SDL_Quit();
+}
+
+void RendererCore::init_swapchain() {
+  const auto surface_capabilities = physical_device.getSurfaceCapabilitiesKHR(*surface);
+
+  vk::Extent2D extent;
+  if (surface_capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()){
+    extent = surface_capabilities.currentExtent;
+  }
+  else {
+    int width, height;
+    SDL_GetWindowSize(window, &width, &height);
+
+    extent = {
+      std::clamp<uint32_t>(
+        width,
+        surface_capabilities.minImageExtent.width,
+        surface_capabilities.maxImageExtent.width
+      ),
+      std::clamp<uint32_t>(
+        height,
+        surface_capabilities.minImageExtent.height,
+        surface_capabilities.maxImageExtent.height
+      )
+    };
+  }
+
+  uint32_t min_image_count = std::min(
+    std::max(3u, surface_capabilities.minImageCount + 1),
+    surface_capabilities.maxImageCount
+  );
+
+  auto available_formats = physical_device.getSurfaceFormatsKHR(*surface);
+  const auto formatIt = std::ranges::find_if(available_formats, [](const auto &format) {
+    return
+      format.format == vk::Format::eB8G8R8A8Srgb &&
+      format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear;
+  });
+  const auto format = (formatIt != available_formats.end()) ?
+    *formatIt: // lambda true
+    available_formats[0]; // lambda false
+
+  auto available_present_modes = physical_device.getSurfacePresentModesKHR(*surface);
+  assert(std::ranges::any_of(available_present_modes, [](auto presentMode) { return presentMode == vk::PresentModeKHR::eFifo; }));
+  auto present_mode = std::ranges::any_of(
+    available_present_modes,
+    [](const vk::PresentModeKHR value) { return vk::PresentModeKHR::eMailbox == value; }
+    ) ?
+    vk::PresentModeKHR::eMailbox: // lambda true
+    vk::PresentModeKHR::eFifo; // lambda false
+
+
+  vk::SwapchainCreateInfoKHR swapchain_create_info{
+    .surface = *surface,
+    .minImageCount = min_image_count,
+    .imageFormat = format.format,
+    .imageColorSpace = format.colorSpace,
+    .imageExtent = extent,
+    .imageArrayLayers = 1,
+    .imageUsage = vk::ImageUsageFlagBits::eColorAttachment,
+    .imageSharingMode = vk::SharingMode::eExclusive,
+    .preTransform = surface_capabilities.currentTransform,
+    .compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
+    .presentMode = present_mode,
+    .clipped = true
+  };
+
+  swapchain = vk::raii::SwapchainKHR(device, swapchain_create_info);
+}
+
+
+RendererCore::RendererCore() {
+  init_window();
+  init_instance();
+  init_surface();
+  init_device_context();
+  init_swapchain();
+}
+
+RendererCore::~RendererCore() {
+  destroy_window();
+}
+
 
