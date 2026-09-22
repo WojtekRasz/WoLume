@@ -175,7 +175,7 @@ void RendererCore::init_instance(){
   const char* const* sdlExtensions = SDL_Vulkan_GetInstanceExtensions(&count);
   std::vector<const char*> required_extensions{sdlExtensions, sdlExtensions + count};
 
-  if ( std::ranges::all_of(required_extensions, [&](std::string_view required) {
+  if (! std::ranges::all_of(required_extensions, [&](std::string_view required) {
     return std::ranges::any_of(availableExtensionsProperties, [required](const auto& available) {
       return required == available.extensionName;
     });
@@ -239,21 +239,20 @@ void RendererCore::destroy_window() {
 void RendererCore::init_swapchain() {
   const auto surface_capabilities = physical_device.getSurfaceCapabilitiesKHR(*surface);
 
-  vk::Extent2D extent;
   if (surface_capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()){
-    extent = surface_capabilities.currentExtent;
+    swapchain_extent = surface_capabilities.currentExtent;
   }
   else {
     int width, height;
     SDL_GetWindowSize(window, &width, &height);
 
-    extent = {
-      std::clamp<uint32_t>(
+    swapchain_extent = vk::Extent2D{
+      .width = std::clamp<uint32_t>(
         width,
         surface_capabilities.minImageExtent.width,
         surface_capabilities.maxImageExtent.width
       ),
-      std::clamp<uint32_t>(
+      .height = std::clamp<uint32_t>(
         height,
         surface_capabilities.minImageExtent.height,
         surface_capabilities.maxImageExtent.height
@@ -276,6 +275,9 @@ void RendererCore::init_swapchain() {
     *formatIt: // lambda true
     available_formats[0]; // lambda false
 
+  swapchain_format = format.format;
+  swapchain_color_space = format.colorSpace;
+
   auto available_present_modes = physical_device.getSurfacePresentModesKHR(*surface);
   assert(std::ranges::any_of(available_present_modes, [](auto presentMode) { return presentMode == vk::PresentModeKHR::eFifo; }));
   auto present_mode = std::ranges::any_of(
@@ -289,9 +291,9 @@ void RendererCore::init_swapchain() {
   vk::SwapchainCreateInfoKHR swapchain_create_info{
     .surface = *surface,
     .minImageCount = min_image_count,
-    .imageFormat = format.format,
-    .imageColorSpace = format.colorSpace,
-    .imageExtent = extent,
+    .imageFormat = swapchain_format,
+    .imageColorSpace = swapchain_color_space,
+    .imageExtent = swapchain_extent,
     .imageArrayLayers = 1,
     .imageUsage = vk::ImageUsageFlagBits::eColorAttachment,
     .imageSharingMode = vk::SharingMode::eExclusive,
@@ -302,8 +304,41 @@ void RendererCore::init_swapchain() {
   };
 
   swapchain = vk::raii::SwapchainKHR(device, swapchain_create_info);
+
+  swapchain_images = swapchain.getImages();
+
+  vk::ImageViewCreateInfo image_view_create_info{
+    .viewType         = vk::ImageViewType::e2D,
+    .format           = swapchain_format,
+    .subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 } };
+
+  image_view_create_info.components = {
+    .r = vk::ComponentSwizzle::eIdentity,
+    .g = vk::ComponentSwizzle::eIdentity,
+    .b = vk::ComponentSwizzle::eIdentity,
+    .a = vk::ComponentSwizzle::eIdentity
+  };
+
+  for (const auto &image : swapchain_images){
+    image_view_create_info.image = image;
+    swapchain_image_views.emplace_back( device, image_view_create_info );
+  }
 }
 
+void RendererCore::init_command_buffers() {
+  vk::CommandPoolCreateInfo poolInfo{
+    .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+    .queueFamilyIndex = queue_family_index
+  };
+  command_pool = vk::raii::CommandPool(device, poolInfo);
+
+  const vk::CommandBufferAllocateInfo allocInfo{
+    .commandPool = command_pool,
+    .level = vk::CommandBufferLevel::ePrimary,
+    .commandBufferCount = MAX_FRAMES_IN_FLIGHT
+  };
+  command_buffers = vk::raii::CommandBuffers{device, allocInfo};
+}
 
 RendererCore::RendererCore() {
   init_window();
@@ -311,6 +346,7 @@ RendererCore::RendererCore() {
   init_surface();
   init_device_context();
   init_swapchain();
+  init_command_buffers();
 }
 
 RendererCore::~RendererCore() {

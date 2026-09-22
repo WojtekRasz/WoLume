@@ -44,7 +44,9 @@ add_custom_target(shaders
 )
 
 add_executable(renderer
-        src/main.cpp
+    src/main.cpp
+    src/renderer.cpp
+    src/renderer_core.cpp
 )
 
 target_compile_definitions(renderer PRIVATE
