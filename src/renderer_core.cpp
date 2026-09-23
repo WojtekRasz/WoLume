@@ -144,6 +144,39 @@ namespace {
 
     return vk::raii::Device{physical_device, device_create_info};
   }
+
+  void transition_image_layout(
+    const vk::raii::CommandBuffer &command_buffer,
+    vk::Image               &image,
+    vk::ImageLayout         old_layout,
+    vk::ImageLayout         new_layout,
+    vk::AccessFlags2        src_access_mask,
+    vk::AccessFlags2        dst_access_mask,
+    vk::PipelineStageFlags2 src_stage_mask,
+    vk::PipelineStageFlags2 dst_stage_mask)
+  {
+    vk::ImageMemoryBarrier2 barrier = {
+      .srcStageMask        = src_stage_mask,
+      .srcAccessMask       = src_access_mask,
+      .dstStageMask        = dst_stage_mask,
+      .dstAccessMask       = dst_access_mask,
+      .oldLayout           = old_layout,
+      .newLayout           = new_layout,
+      .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+      .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+      .image               = image,
+      .subresourceRange    = {
+        .aspectMask     = vk::ImageAspectFlagBits::eColor,
+        .baseMipLevel   = 0,
+        .levelCount     = 1,
+        .baseArrayLayer = 0,
+        .layerCount     = 1}};
+    vk::DependencyInfo dependency_info = {
+      .dependencyFlags         = {},
+      .imageMemoryBarrierCount = 1,
+      .pImageMemoryBarriers    = &barrier};
+    command_buffer.pipelineBarrier2(dependency_info);
+  }
 }
 
 
@@ -340,6 +373,146 @@ void RendererCore::init_command_buffers() {
   command_buffers = vk::raii::CommandBuffers{device, allocInfo};
 }
 
+void RendererCore::init_sync_objects() {
+  for (size_t i = 0; i < swapchain_images.size(); i++){
+    render_finished_semaphores.emplace_back(device, vk::SemaphoreCreateInfo());
+  }
+
+  for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++){
+    present_complete_semaphores.emplace_back(device, vk::SemaphoreCreateInfo());
+    in_flight_fences.emplace_back(device, vk::FenceCreateInfo{.flags = vk::FenceCreateFlagBits::eSignaled});
+  }
+}
+
+const Frame& RendererCore::start_frame_rendering() {
+  uint32_t frame_index = current_frame.frame_index;
+  //std::cout << "Current frame:\n" << current_frame.frame_number << ", " << current_frame.frame_index << "\n";
+
+  auto fence_result = device.waitForFences(
+    *in_flight_fences[frame_index],
+    vk::True,
+    UINT64_MAX);
+  if (fence_result != vk::Result::eSuccess){
+    throw std::runtime_error("failed to wait for fence!");
+  }
+  device.resetFences(*in_flight_fences[frame_index]);
+
+  auto [result, image_index] = swapchain.acquireNextImage(
+    UINT64_MAX,
+    *present_complete_semaphores[frame_index],
+    nullptr);
+
+  current_frame.swapchain_image_index = image_index;
+  auto &current_command_buffer = command_buffers[frame_index];
+
+  current_command_buffer.reset();
+  current_command_buffer.begin({});
+  transition_image_layout(
+    current_command_buffer,
+    swapchain_images[image_index],
+    vk::ImageLayout::eUndefined,
+    vk::ImageLayout::eColorAttachmentOptimal,
+    {},
+    vk::AccessFlagBits2::eColorAttachmentReadNoncoherentEXT,
+    vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+    vk::PipelineStageFlagBits2::eColorAttachmentOutput
+  );
+
+  constexpr vk::ClearValue clearColor = vk::ClearColorValue(0.02f, 0.00f, 0.02f, 1.0f);
+  vk::RenderingAttachmentInfo attachmentInfo = {
+    .imageView   = swapchain_image_views[image_index],
+    .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+    .loadOp      = vk::AttachmentLoadOp::eClear,
+    .storeOp     = vk::AttachmentStoreOp::eStore,
+    .clearValue  = clearColor
+  };
+  const vk::RenderingInfo renderingInfo = {
+    .renderArea           = {
+      .offset = {0, 0},
+      .extent = swapchain_extent
+    },
+    .layerCount           = 1,
+    .colorAttachmentCount = 1,
+    .pColorAttachments    = &attachmentInfo
+  };
+  current_command_buffer.beginRendering(renderingInfo);
+
+  current_command_buffer.setViewport(
+      0,
+      vk::Viewport(
+        0.0f,
+        0.0f,
+        static_cast<float>(swapchain_extent.width),
+        static_cast<float>(swapchain_extent.height),
+        0.0f,
+        1.0f
+      )
+    );
+  current_command_buffer.setScissor(
+    0,
+    vk::Rect2D(vk::Offset2D(0, 0), swapchain_extent)
+  );
+
+  return current_frame;
+}
+
+void RendererCore::submit_frame_rendering(const Frame &frame){
+  const auto &current_command_buffer = command_buffers[frame.frame_index];
+
+  current_command_buffer.endRendering();
+  transition_image_layout(
+    current_command_buffer,
+    swapchain_images[frame.swapchain_image_index],
+    vk::ImageLayout::eColorAttachmentOptimal,
+    vk::ImageLayout::ePresentSrcKHR,
+    vk::AccessFlagBits2::eColorAttachmentWrite,
+    {},
+    vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+    vk::PipelineStageFlagBits2::eBottomOfPipe
+  );
+  current_command_buffer.end();
+
+  vk::PipelineStageFlags wait_destination_stage_mask(
+  vk::PipelineStageFlagBits::eColorAttachmentOutput
+  );
+
+  const vk::SubmitInfo submitInfo{
+    .waitSemaphoreCount   = 1,
+    .pWaitSemaphores      = &*present_complete_semaphores[frame.frame_index],
+    .pWaitDstStageMask    = &wait_destination_stage_mask,
+    .commandBufferCount   = 1,
+    .pCommandBuffers      = &*current_command_buffer,
+    .signalSemaphoreCount = 1,
+    .pSignalSemaphores    = &*render_finished_semaphores[frame.swapchain_image_index]
+  };
+
+  queue.submit(submitInfo, *in_flight_fences[frame.frame_index]);
+
+  const vk::PresentInfoKHR presentInfoKHR{
+    .waitSemaphoreCount = 1,
+    .pWaitSemaphores    = &*render_finished_semaphores[frame.swapchain_image_index],
+    .swapchainCount     = 1,
+    .pSwapchains        = &*swapchain,
+    .pImageIndices      = &frame.swapchain_image_index
+  };
+
+  switch (auto result = queue.presentKHR(presentInfoKHR))
+  {
+    case vk::Result::eSuccess:
+      break;
+    case vk::Result::eSuboptimalKHR:
+      std::cout << "vk::Queue::presentKHR returned vk::Result::eSuboptimalKHR !\n";
+      break;
+    default:
+      break;        // an unexpected result is returned!
+  }
+
+  current_frame = {
+    .frame_number = frame.frame_number + 1,
+    .frame_index = (frame.frame_index + 1) % MAX_FRAMES_IN_FLIGHT
+  };
+}
+
 RendererCore::RendererCore() {
   init_window();
   init_instance();
@@ -347,9 +520,11 @@ RendererCore::RendererCore() {
   init_device_context();
   init_swapchain();
   init_command_buffers();
+  init_sync_objects();
 }
 
 RendererCore::~RendererCore() {
+  device.waitIdle();
   destroy_window();
 }
 

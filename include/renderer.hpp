@@ -5,10 +5,11 @@
 class Renderer {
 public:
   Renderer();
+  ~Renderer();
 
   void run();
 
 private:
-  const RendererCore core;
+  RendererCore core;
   RenderingSystem system;
 };
